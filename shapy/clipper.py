@@ -1922,6 +1922,49 @@ class Clipper(ClipperBase):
             else:
                 outRec.FirstLeft.PolyNode._AddChild(outRec.PolyNode)                 
         return
+
+def PointClipper(subject, clip, typecombi, cliptype):
+    if cliptype == "intersect":
+        if typecombi == "pointline":
+            #return subject points that are on cliplines
+            pass
+        elif typecombi == "polypoint":
+            #assuming subject is the poly
+            poly = subject
+            point = clip
+            exterior = poly[0]
+            if len(subject) > 1: holes = poly[1:]
+            else: holes = []
+            if PointInPoly(point, exterior, holes):
+                return point
+        elif typecombi == "pointpoint":
+            #return a point for every two equal points
+            pass
+    elif cliptype == "union":
+        if typecombi == "pointpoint":
+            #make subject and clip points into one multipoint
+            pass
+        else:
+            raise Exception("Different shapetypes cannot be unioned together")
+    elif cliptype == "difference":
+        if typecombi == "pointpoint":
+            #return subject points that are not in clip points
+            pas
+        elif typecombi == "pointline":
+            #return points that are not on clip lines
+            pass
+        elif typecombi == "pointpoly":
+            #return points that are not inside poly 
+            pass
+    elif cliptype == "symmetric_difference":
+        if typecombi == "pointpoint":
+            #return any points that have different coordinates
+            pass
+        else:
+            raise Exception("Cannot retrieve symmetric difference bw different shapetypes")
+        
+def LineClipper(subject, clip, typecombi, cliptype):
+    pass
        
 #===============================================================================
 # OffsetPolygons (+ ancilliary functions)
@@ -2204,7 +2247,6 @@ def OffsetPolyLines(polys, delta, jointype = JoinType.Square, endtype = EndType.
         if p == []: continue            
         for i in range(1, len(p)):
             if _PointsEqual(p[i-1], p[i]): p.pop(i)
-
     if endtype == EndType.Closed:
         for i in range(len(polys2)):
             polys2.append(polys2[i][::-1])
@@ -2213,6 +2255,8 @@ def OffsetPolyLines(polys, delta, jointype = JoinType.Square, endtype = EndType.
         return _OffsetInternal(polys2, False, delta, jointype, endtype, limit) 
 
 def OffsetPoint(point, delta, jointype = JoinType.Round, limit = 0.0):
+    # Mashup of other functions in the script
+    # By: Karim Bahgat
     #NOT FINISHED...
     def _DoSquare(pt):
         pt1 = Point(round(pt.x + Normals[k].x * delta), round(pt.y + Normals[k].y * delta))
@@ -2273,6 +2317,42 @@ def OffsetPoint(point, delta, jointype = JoinType.Round, limit = 0.0):
     results = _OffsetPoint(jointype, limit)
     return results
 
+def PointInPoly(point, exterior, holes=[]):
+    """
+    Note: Takes xy tuples instead of objects with .x or .y attributes.
+    """
+    #By: Karim Bahgat
+    if _PointInRing(point, exterior):
+        #point is inside exterior, unless it is hiding in a hole
+        if holes:
+            for hole in holes:
+                if _PointInRing(point, hole):
+                    return False
+            #was not inside any holes, so must be on polygon
+            return True
+        else:
+            #no holes to hide in, so must be on polygon
+            return True
+    else:
+        #not inside exterior
+        return False
+    
+def _PointInRing(point, ring): 
+    # Modified to take xy tuples instead of .x and .y
+    # By: Karim Bahgat
+    pointx,pointy = point
+    inside = False
+    lastpolypointx,lastpolypointy = ring[0]
+    for polypoint in ring[1:]:
+        polypointx,polypointy = polypoint
+        if ((((polypointy <= pointy) and (pointy < lastpolypointy)) or \
+            ((lastpolypointy <= pointy) and (pointy < polypointy))) and \
+            (pointx < (lastpolypointx - polypointx) * (pointy - polypointy) / \
+            (lastpolypointy - polypointy) + polypointx)):
+            inside = not inside
+        lastpolypointx,lastpolypointy = polypoint
+    return inside
+
 def _DistanceSqrd(pt1, pt2):
     dx = (pt1.x - pt2.x)
     dy = (pt1.y - pt2.y)
@@ -2283,10 +2363,10 @@ def _ClosestPointOnLine(pt, linePt1, linePt2):
     dy = linePt2.y - linePt1.y
     if (dx == 0 and dy == 0): 
         return DoublePoint(linePt1.x, linePt1.y)
-    q = ((pt.x-linePt1.x)*dx + (pt.Y-linePt1.Y)*dy) / (dx*dx + dy*dy)
+    q = ((pt.x-linePt1.x)*dx + (pt.y-linePt1.y)*dy) / (dx*dx + dy*dy)
     return DoublePoint(
-      (1-q)*linePt1.X + q*linePt2.X,
-      (1-q)*linePt1.Y + q*linePt2.Y)
+      (1-q)*linePt1.x + q*linePt2.x,
+      (1-q)*linePt1.y + q*linePt2.y)
 
 def _SlopesNearColinear(pt1, pt2, pt3, distSqrd):
     if _DistanceSqrd(pt1, pt2) > _DistanceSqrd(pt1, pt3): return False
