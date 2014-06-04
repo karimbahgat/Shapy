@@ -112,8 +112,8 @@ def distancetesting(VIEWGEOMS=False):
     if VIEWGEOMS:
         #WARNING, THE RESULTS SETUP WILL CHANGE SO THIS CODE WILL FAIL
         import pydraw
-        css = pydraw.CoordinateSystem([0,0,60,60])
-        img = pydraw.Image(400,400,css=css)
+        crs = pydraw.CoordinateSystem([0,0,60,60])
+        img = pydraw.Image(400,400,crs=crs)
         #closestpoint = result["closestpoint_line"]
         img.drawcircle(*point.coords[0], fillsize=15, fillcolor=(222,0,0))
         img.drawgeojson(line)
@@ -134,8 +134,8 @@ def distancetesting(VIEWGEOMS=False):
     if VIEWGEOMS:
         #WARNING, THE RESULTS SETUP WILL CHANGE SO THIS CODE WILL FAIL
         import pydraw
-        css = pydraw.CoordinateSystem([0,0,11,11])
-        img = pydraw.Image(400,400,css=css)
+        crs = pydraw.CoordinateSystem([0,0,11,11])
+        img = pydraw.Image(400,400,crs=crs)
         #closestpoint = result["closestpoint_line"]
         img.drawcircle(*point.coords[0], fillsize=15, fillcolor=(222,0,0))
         img.drawgeojson(polygon)
@@ -200,8 +200,8 @@ def uniontesting(VIEWGEOMS=False):
     print("cumulative union:")
     # setup image drawer
     import pydraw
-    css = pydraw.CoordinateSystem([-180,90,180,-90])
-    img = pydraw.Image(1000,500, background=(0,0,111), css=css)
+    crs = pydraw.CoordinateSystem([-180,90,180,-90])
+    img = pydraw.Image(1000,500, background=(0,0,111), crs=crs)
     # load and loop shapefile
     import geovis.shapefile_fork as pyshp
     cshapesfile = "D:/Test Data/cshapes/cshapes.shp"
@@ -222,7 +222,7 @@ def uniontesting(VIEWGEOMS=False):
                 img.drawgeojson(union) #img.drawgeojson(geom)
                 oldshape = union
             except:
-                #img2 = pydraw.Image(1000,500, background=(0,0,111), css=css)
+                #img2 = pydraw.Image(1000,500, background=(0,0,111), crs=crs)
                 #img2.drawgeojson(oldshape, fillcolor=(0,222,0))
                 #img2.drawgeojson(geom, fillcolor=(222,0,0))
                 #img2.view()
@@ -233,7 +233,7 @@ def uniontesting(VIEWGEOMS=False):
             if VIEWGEOMS:
                 img.drawgeojson(union)
                 img.view()
-                union.view(css=css)
+                union.view(crs=crs)
             break
     img.view()
 

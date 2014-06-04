@@ -4,10 +4,10 @@ if __name__ == "__main__":
     
     import pydraw
 
-    css = pydraw.CoordinateSystem([0,0,100,100])
-    img = pydraw.Image(880,440, background=(222,0,0), css=css)
+    crs = pydraw.CoordinateSystem([0,0,100,100])
+    img = pydraw.Image(880,440, background=(222,0,0), crs=crs)
     #img = Image(filepath="C:/Users/BIGKIMO/Desktop/hmm.png")
-    #print css.getinfo()
+    #print crs.getinfo()
 
     #SINGLE PIXEL TEST
     img.put(94.7,94.7,(0,0,222))
@@ -48,9 +48,9 @@ if __name__ == "__main__":
     img.save("C:/Users/BIGKIMO/Desktop/hmm.png")
 
     #TEST COORDINATE SYSTEM TO PIXELS
-##    css = pydraw.CoordinateSystem([-180,90,180,-90])
-##    img = pydraw.Image(600,600, background=(222,0,0), css=css)
-##    print css.getinfo()
+##    crs = pydraw.CoordinateSystem([-180,90,180,-90])
+##    img = pydraw.Image(600,600, background=(222,0,0), crs=crs)
+##    print crs.getinfo()
 ##    poly = [(-170,-80),(-170,80),(170,80),(170,-80)]
 ##    holes = [[(-100,-50),(-100,50),(100,10),(100,-50)]]
 ##    img.drawpolygon(poly, holes=holes)

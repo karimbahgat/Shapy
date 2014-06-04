@@ -304,22 +304,22 @@ class Point:
         #    pass
         return minresult
     ### Other
-    def view(self, imagesize=None, css=None):
+    def view(self, imagesize=None, crs=None, fillcolor=(111,111,111), outlinecolor=(0,0,0)):
         """
         Draws and pops up a window with the shape.
 
         - imagesize is an optional two-tuple of the pixel size of the viewimage in the form of (pixelwidth,pixelheight). Default is 400 by 400.
         """
         import pydraw
-        if not css:
+        if not crs:
             x1,y1,x2,y2 = self.bounds
             xoffset = 5
             yoffset = 5
-            css_bounds = [x1-xoffset, y1-yoffset, x2+xoffset, y2+yoffset]
-            css = pydraw.CoordinateSystem(css_bounds)
+            crs_bounds = [x1-xoffset, y1-yoffset, x2+xoffset, y2+yoffset]
+            crs = pydraw.CoordinateSystem(crs_bounds)
         if not imagesize: imagesize = (400,400)
-        img = pydraw.Image(*imagesize, background=(250,250,250), css=css)
-        img.drawgeojson(self)
+        img = pydraw.Image(*imagesize, background=(250,250,250), crs=crs)
+        img.drawgeojson(self, fillcolor=fillcolor, outlinecolor=outlinecolor)
         img.view()
 
 class MultiPoint:
@@ -355,24 +355,24 @@ class MultiPoint:
         # for points use the _DoRound(pt, limit) function from inside _OffsetInternal
         pass
     ### Other
-    def view(self, imagesize=None, css=None):
+    def view(self, imagesize=None, crs=None, fillcolor=(111,111,111), outlinecolor=(0,0,0)):
         """
         Draws and pops up a window with the shape.
 
         - imagesize is an optional two-tuple of the pixel size of the viewimage in the form of (pixelwidth,pixelheight). Default is 400 by 400.
         """
         import pydraw
-        if not css:
+        if not crs:
             x1,y1,x2,y2 = self.bounds
             xwidth = x2-x1
             yheight = y2-y1
             xoffset = xwidth*0.1
             yoffset = yheight*0.1
-            css_bounds = [x1-xoffset, y1-yoffset, x2+xoffset, y2+yoffset]
-            css = pydraw.CoordinateSystem(css_bounds)
+            crs_bounds = [x1-xoffset, y1-yoffset, x2+xoffset, y2+yoffset]
+            crs = pydraw.CoordinateSystem(crs_bounds)
         if not imagesize: imagesize = (400,400)
-        img = pydraw.Image(*imagesize, background=(250,250,250), css=css)
-        img.drawgeojson(self)
+        img = pydraw.Image(*imagesize, background=(250,250,250), crs=crs)
+        img.drawgeojson(self, fillcolor=fillcolor, outlinecolor=outlinecolor)
         img.view()
         
 class LineString:
@@ -432,24 +432,24 @@ class LineString:
         geom = _ResultTree2Geom(resulttree)
         return geom
     ### Other
-    def view(self, imagesize=None, css=None):
+    def view(self, imagesize=None, crs=None, fillcolor=(111,111,111), outlinecolor=(0,0,0)):
         """
         Draws and pops up a window with the shape.
 
         - imagesize is an optional two-tuple of the pixel size of the viewimage in the form of (pixelwidth,pixelheight). Default is 400 by 400.
         """
         import pydraw
-        if not css:
+        if not crs:
             x1,y1,x2,y2 = self.bounds
             xwidth = x2-x1
             yheight = y2-y1
             xoffset = xwidth*0.1
             yoffset = yheight*0.1
-            css_bounds = [x1-xoffset, y1-yoffset, x2+xoffset, y2+yoffset]
-            css = pydraw.CoordinateSystem(css_bounds)
+            crs_bounds = [x1-xoffset, y1-yoffset, x2+xoffset, y2+yoffset]
+            crs = pydraw.CoordinateSystem(crs_bounds)
         if not imagesize: imagesize = (400,400)
-        img = pydraw.Image(*imagesize, background=(250,250,250), css=css)
-        img.drawgeojson(self)
+        img = pydraw.Image(*imagesize, background=(250,250,250), crs=crs)
+        img.drawgeojson(self, fillcolor=fillcolor, outlinecolor=outlinecolor)
         img.view()
 
 class MultiLineString:
@@ -516,24 +516,24 @@ class MultiLineString:
         #geom = _ResultTree2Geom(resulttree)
         #return geom
     ### Other
-    def view(self, imagesize=None, css=None):
+    def view(self, imagesize=None, crs=None, fillcolor=(111,111,111), outlinecolor=(0,0,0)):
         """
         Draws and pops up a window with the shape.
 
         - imagesize is an optional two-tuple of the pixel size of the viewimage in the form of (pixelwidth,pixelheight). Default is 400 by 400.
         """
         import pydraw
-        if not css:
+        if not crs:
             x1,y1,x2,y2 = self.bounds
             xwidth = x2-x1
             yheight = y2-y1
             xoffset = xwidth*0.1
             yoffset = yheight*0.1
-            css_bounds = [x1-xoffset, y1-yoffset, x2+xoffset, y2+yoffset]
-            css = pydraw.CoordinateSystem(css_bounds)
+            crs_bounds = [x1-xoffset, y1-yoffset, x2+xoffset, y2+yoffset]
+            crs = pydraw.CoordinateSystem(crs_bounds)
         if not imagesize: imagesize = (400,400)
-        img = pydraw.Image(*imagesize, background=(250,250,250), css=css)
-        img.drawgeojson(self)
+        img = pydraw.Image(*imagesize, background=(250,250,250), crs=crs)
+        img.drawgeojson(self, fillcolor=fillcolor, outlinecolor=outlinecolor)
         img.view()
         
 class LinearRing:
@@ -681,24 +681,24 @@ class Polygon:
         result = _Clip(subjpolys, clippolys, "exclusive_or")
         return result
     ### Other
-    def view(self, imagesize=None, css=None):
+    def view(self, imagesize=None, crs=None, fillcolor=(111,111,111), outlinecolor=(0,0,0)):
         """
         Draws and pops up a window with the shape.
 
         - imagesize is an optional two-tuple of the pixel size of the viewimage in the form of (pixelwidth,pixelheight). Default is 400 by 400.
         """
         import pydraw
-        if not css:
+        if not crs:
             x1,y1,x2,y2 = self.bounds
             xwidth = x2-x1
             yheight = y2-y1
             xoffset = xwidth*0.1
             yoffset = yheight*0.1
-            css_bounds = [x1-xoffset, y1-yoffset, x2+xoffset, y2+yoffset]
-            css = pydraw.CoordinateSystem(css_bounds)
+            crs_bounds = [x1-xoffset, y1-yoffset, x2+xoffset, y2+yoffset]
+            crs = pydraw.CoordinateSystem(crs_bounds)
         if not imagesize: imagesize = (400,400)
-        img = pydraw.Image(*imagesize, background=(250,250,250), css=css)
-        img.drawgeojson(self)
+        img = pydraw.Image(*imagesize, background=(250,250,250), crs=crs)
+        img.drawgeojson(self, fillcolor=fillcolor, outlinecolor=outlinecolor)
         img.view()
     ### Internal use only
     def _addtoclipper(self, clipperobj, addtype):
@@ -798,24 +798,24 @@ class MultiPolygon:
         result = _Clip(subjpolys, clippolys, "exclusive_or")
         return result
     ### Other
-    def view(self, imagesize=None, css=None):
+    def view(self, imagesize=None, crs=None, fillcolor=(111,111,111), outlinecolor=(0,0,0)):
         """
         Draws and pops up a window with the shape.
 
         - imagesize is an optional two-tuple of the pixel size of the viewimage in the form of (pixelwidth,pixelheight). Default is 400 by 400.
         """
         import pydraw
-        if not css:
+        if not crs:
             x1,y1,x2,y2 = self.bounds
             xwidth = x2-x1
             yheight = y2-y1
             xoffset = xwidth*0.1
             yoffset = yheight*0.1
-            css_bounds = [x1-xoffset, y1-yoffset, x2+xoffset, y2+yoffset]
-            css = pydraw.CoordinateSystem(css_bounds)
+            crs_bounds = [x1-xoffset, y1-yoffset, x2+xoffset, y2+yoffset]
+            crs = pydraw.CoordinateSystem(crs_bounds)
         if not imagesize: imagesize = (400,400)
-        img = pydraw.Image(*imagesize, background=(250,250,250), css=css)
-        img.drawgeojson(self)
+        img = pydraw.Image(*imagesize, background=(250,250,250), crs=crs)
+        img.drawgeojson(self, fillcolor=fillcolor, outlinecolor=outlinecolor)
         img.view()
     ### Internal use only
     def _addtoclipper(self, clipperobj, addtype):

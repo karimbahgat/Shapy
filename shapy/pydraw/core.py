@@ -23,7 +23,7 @@ else:
 
 class Image(object):
     #STARTING
-    def __init__(self,width=None,height=None,background=None,filepath=None,data=None,css=None):
+    def __init__(self,width=None,height=None,background=None,filepath=None,data=None,crs=None):
         """
         The main image instance, which can load or create a new image.
         Also has various methods for drawing and transforming the image.
@@ -54,7 +54,7 @@ class Image(object):
 
         | **option** | **description**
         | --- | --- 
-        | *css | a coordinate system instance that defines the desired coordinate space of the image. 
+        | *crs | a coordinate system instance that defines the desired coordinate space of the image. 
         
         """
         #initiate image
@@ -68,9 +68,9 @@ class Image(object):
             horizline = [background for _ in xrange(width)]
             self.imagegrid = [list(horizline) for _ in xrange(height)]
         #set coordinate system
-        self.css = css
-        if css:
-            css.bindimage(img=self)
+        self.crs = crs
+        if crs:
+            crs.bindimage(img=self)
             self.coordmode = True
         else:
             self.coordmode = False
@@ -181,7 +181,7 @@ class Image(object):
         
         """
         if self.coordmode:
-            x,y = self.css.point2pixel(x,y)
+            x,y = self.crs.point2pixel(x,y)
         self._get(x,y,color)
         
     def _get(self,x,y):
@@ -201,7 +201,7 @@ class Image(object):
 
         """
         if self.coordmode:
-            x,y = self.css.point2pixel(x,y)
+            x,y = self.crs.point2pixel(x,y)
         self._put(x,y,color)
         
     def _put(self, x,y,color):
@@ -269,7 +269,7 @@ class Image(object):
         and only nw anchor supported for now
         """
         if self.coordmode:
-            x,y = self.css.point2pixel(x,y)
+            x,y = self.crs.point2pixel(x,y)
         dataheight = len(data)
         datawidth = len(data[0])
         alpha = 255*transparency
@@ -304,7 +304,7 @@ class Image(object):
 ##        - bendside is left or right side to bend
 ##        - bendanchor is the float ratio to offset the bend from its default anchor point at the center of the line.
         if self.coordmode:
-            (x1,y1),(x2,y2) = self.css.coords2pixels([(x1,y1),(x2,y2)])
+            (x1,y1),(x2,y2) = self.crs.coords2pixels([(x1,y1),(x2,y2)])
         self._drawline(x1,y1,x2,y2,fillcolor=fillcolor,outlinecolor=outlinecolor,fillsize=fillsize,outlinewidth=outlinewidth,capstyle=capstyle)
 
     def _drawline(self, x1, y1, x2, y2, fillcolor=(0,0,0), outlinecolor=None, fillsize=1, outlinewidth=1, capstyle="butt"): #, bendfactor=None, bendside=None, bendanchor=None):
@@ -395,7 +395,7 @@ class Image(object):
         | **other | also accepts various color and size arguments, see the docstring for drawline.
         """
         if self.coordmode:
-            coords = self.css.coords2pixels(coords)
+            coords = self.crs.coords2pixels(coords)
         self._drawmultiline(coords,fillcolor=fillcolor,outlinecolor=outlinecolor,fillsize=fillsize,outlinewidth=outlinewidth,joinstyle=joinstyle)
 
     def _drawmultiline(self, coords, fillcolor=(0,0,0), outlinecolor=None, fillsize=1, outlinewidth=1, joinstyle="miter"): #, bendfactor=None, bendside=None, bendanchor=None):
@@ -601,7 +601,7 @@ class Image(object):
         
         """
         if self.coordmode:
-            xypoints = self.css.coords2pixels(xypoints)
+            xypoints = self.crs.coords2pixels(xypoints)
         self._drawbezier(xypoints,fillcolor=fillcolor,outlinecolor=outlinecolor,fillsize=fillsize,outlinewidth=outlinewidth,intervals=intervals)
 
     def _drawbezier(self, xypoints, fillcolor=(0,0,0), outlinecolor=None, fillsize=1, intervals=100):
@@ -614,7 +614,7 @@ class Image(object):
         Optional to use opening and facings args, or start and end angle args
         """
         if self.coordmode:
-            x,y = self.css.point2pixel(x,y)
+            x,y = self.crs.point2pixel(x,y)
         self._drawarc(x,y,radius,opening,facing,startangle,endangle,fillcolor=fillcolor,outlinecolor=outlinecolor,outlinewidth=outlinewidth)
         
     def _drawarc(self, x, y, radius, opening=None, facing=None, startangle=None, endangle=None, fillcolor=(0,0,0), outlinecolor=None, outlinewidth=1):        
@@ -637,7 +637,7 @@ class Image(object):
         #flatten=...
         #flatangle=...
         if self.coordmode:
-            x,y = self.css.point2pixel(x,y)
+            x,y = self.crs.point2pixel(x,y)
         self._drawcircle(x,y,fillsize, fillcolor=fillcolor, outlinecolor=outlinecolor, outlinewidth=outlinewidth)
 
     def _drawcircle(self, x, y, fillsize, fillcolor=(0,0,0), outlinecolor=None, outlinewidth=1): #, flatten=None, flatangle=None):
@@ -667,7 +667,7 @@ class Image(object):
 
     def drawsquare(self, x,y,fillsize, fillcolor=(0,0,0), outlinecolor=None, outlinewidth=1, outlinejoinstyle=None):
         if self.coordmode:
-            x,y = self.css.point2pixel(x,y)
+            x,y = self.crs.point2pixel(x,y)
         self._drawsquare(x,y,fillsize, fillcolor=fillcolor, outlinecolor=outlinecolor, outlinewidth=outlinewidth, outlinejoinstyle=outlinejoinstyle)
 
     def _drawsquare(self, x,y,fillsize, fillcolor=(0,0,0), outlinecolor=None, outlinewidth=1, outlinejoinstyle=None):
@@ -688,9 +688,9 @@ class Image(object):
         
         """
         if self.coordmode:
-            coords = self.css.coords2pixels(coords)
+            coords = self.crs.coords2pixels(coords)
             if holes:
-                holes = [self.css.coords2pixels(hole) for hole in holes]
+                holes = [self.crs.coords2pixels(hole) for hole in holes]
         self._drawpolygon(coords,holes=holes,fillcolor=fillcolor, outlinecolor=outlinecolor, outlinewidth=outlinewidth, outlinejoinstyle=outlinejoinstyle)
 
     def _drawpolygon(self, coords, holes=[], fillcolor=(0,0,0), outlinecolor=None, outlinewidth=1, outlinejoinstyle="miter"):
@@ -779,7 +779,7 @@ class Image(object):
     def drawrectangle(self, bbox, fillcolor=(0,0,0), outlinecolor=None, outlinewidth=1, outlinejoinstyle=None):
         if self.coordmode:
             x1,y1,x2,y2 = bbox
-            (x1,y1),(x2,y2) = self.css.coords2pixels([(x1,y1),(x2,y2)])
+            (x1,y1),(x2,y2) = self.crs.coords2pixels([(x1,y1),(x2,y2)])
             bbox = [x1,y1,x2,y2]
         self._drawrectangle(bbox, fillcolor=fillcolor, outlinecolor=outlinecolor, outlinewidth=outlinewidth, outlinejoinstyle=outlinejoinstyle)
     def _drawrectangle(self, bbox, fillcolor=(0,0,0), outlinecolor=None, outlinewidth=1, outlinejoinstyle=None):
@@ -799,25 +799,25 @@ class Image(object):
         coords = geojson["coordinates"]
         if geotype == "Point":
             if self.coordmode:
-                coords = self.css.point2pixel(*coords)
+                coords = self.crs.point2pixel(*coords)
             self._drawcircle(*coords, fillsize=fillsize, outlinecolor=outlinecolor, fillcolor=fillcolor, outlinewidth=outlinewidth)
         elif geotype == "MultiPoint":
             if self.coordmode:
-                coords = self.css.coords2pixels(coords)
+                coords = self.crs.coords2pixels(coords)
             for point in coords:
                 self._drawcircle(*point, fillsize=fillsize, outlinecolor=outlinecolor, fillcolor=fillcolor, outlinewidth=outlinewidth)
         elif geotype == "LineString":
             if self.coordmode:
-                coords = self.css.coords2pixels(coords)
+                coords = self.crs.coords2pixels(coords)
             self._drawmultiline(coords, fillcolor=fillcolor, outlinecolor=outlinecolor, fillsize=fillsize, outlinewidth=outlinewidth, joinstyle=joinstyle)
         elif geotype == "MultiLineString":
             if self.coordmode:
-                coords = (self.css.coords2pixels(eachmulti) for eachmulti in coords)
+                coords = (self.crs.coords2pixels(eachmulti) for eachmulti in coords)
             for eachmulti in coords:
                 self._drawmultiline(eachmulti, fillcolor=fillcolor, outlinecolor=outlinecolor, fillsize=fillsize, outlinewidth=outlinewidth, joinstyle=joinstyle)
         elif geotype == "Polygon":
             if self.coordmode:
-                coords = [self.css.coords2pixels(polyorhole) for polyorhole in coords]
+                coords = [self.crs.coords2pixels(polyorhole) for polyorhole in coords]
             exterior = coords[0]
             interiors = []
             if len(coords) > 1:
@@ -825,7 +825,7 @@ class Image(object):
             self._drawpolygon(exterior, holes=interiors, fillcolor=fillcolor, outlinecolor=outlinecolor, outlinewidth=outlinewidth, outlinejoinstyle=outlinejoinstyle)
         elif geotype == "MultiPolygon":
             if self.coordmode:
-                coords = ([self.css.coords2pixels(polyorhole) for polyorhole in eachmulti] for eachmulti in coords)
+                coords = ([self.crs.coords2pixels(polyorhole) for polyorhole in eachmulti] for eachmulti in coords)
             for eachmulti in coords:
                 exterior = eachmulti[0]
                 interiors = []
@@ -847,7 +847,7 @@ class Image(object):
         
         """
         if self.coordmode:
-            x,y = self.css.point2pixel(x,y)
+            x,y = self.crs.point2pixel(x,y)
         self._floodfill(x,y,fillcolor,fuzzythresh=fuzzythresh)
 
     def _floodfill(self,x,y,fillcolor,fuzzythresh=1.0):
