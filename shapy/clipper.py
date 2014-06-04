@@ -434,8 +434,8 @@ class ClipperBase(object):
 #===============================================================================
 def _IntersectPoint(edge1, edge2):
     if _SlopesEqual2(edge1, edge2):
-        if (edge2.ybot > edge1.ybot): y = edge2.ybot 
-        else: y = edge1.ybot
+        if (edge2.yBot > edge1.yBot): y = edge2.yBot 
+        else: y = edge1.yBot
         return Point(0, y), False
     if edge1.dx == 0:
         x = edge1.xBot
@@ -2336,7 +2336,41 @@ def PointInPoly(point, exterior, holes=[]):
     else:
         #not inside exterior
         return False
-    
+
+def PointOnLineSegment(pt, linePt1, linePt2):
+    #NOT YET DONE
+    #Simplified to take normal xy tuples
+    #By: Karim Bahgat
+    return ((pt.x == linePt1.x) and (pt.y == linePt1.y)) or \
+        ((pt.x == linePt2.x) and (pt.y == linePt2.y)) or \
+        (((pt.x > linePt1.x) == (pt.x < linePt2.x)) and \
+        ((pt.y > linePt1.y) == (pt.y < linePt2.y)) and \
+        ((pt.x - linePt1.x) * (linePt2.y - linePt1.y) == \
+        (linePt2.x - linePt1.x) * (pt.y - linePt1.y)))
+
+def PointOnPolygonEdge(pt, pp):
+    #NOT YET DONE
+    #Simplified to take normal xy tuples
+    #By: Karim Bahgat
+    pp2 = pp;
+    while True:
+        if (_PointOnLineSegment(pt, pp2.pt, pp2.nextOp.pt)):
+            return True
+        pp2 = pp2.nextOp
+        if (pp2 == pp): return False
+
+def Poly2ContainsPoly1(outPt1, outPt2):
+    #NOT YET DONE
+    #Simplified to take normal xy tuples
+    #By: Karim Bahgat
+    pt = outPt1
+    if (_PointOnPolygon(pt.pt, outPt2)):
+        pt = pt.nextOp
+        while (pt != outPt1 and _PointOnPolygon(pt.pt, outPt2)):
+            pt = pt.nextOp
+        if (pt == outPt1): return True
+    return _PointInPolygon(pt.pt, outPt2)    
+
 def _PointInRing(point, ring): 
     # Modified to take xy tuples instead of .x and .y
     # By: Karim Bahgat

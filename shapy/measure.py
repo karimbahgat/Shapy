@@ -103,3 +103,5 @@ def _line2point(line, point, getclosestpoint=False, relativedist=False):
     if getclosestpoint: result = (dist,(x,y))
     else: result = dist
     return result
+def _line2line(line1, line2, getclosestpoint=False, relativedist=False):
+    pass

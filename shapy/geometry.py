@@ -151,7 +151,8 @@ def _Dist(geom1, geom2, getclosestpoints=False, relativedist=False):
     distance, the closest point on a polygon is given as
     "closestpoint_poly", while for a linestring it is 
     "closestpoint_line". Points don't generate any closestpoint
-    values. 
+    values. However, this is a bit iffy and not yet implemented
+    and will change. 
     """
     typecombi = _TypeCombi(geom1, geom2)
     #then measure distance bw different shapetypes
@@ -227,7 +228,7 @@ def geoj2geom(shapeobj):
         geom = LineString(linelist)
     elif geotype == "MultiLineString":
         multilinelist = coords
-        geom = LineString(multilinelist)
+        geom = MultiLineString(multilinelist)
     elif geotype == "Polygon":
         exterior = coords[0]
         interiors = []
@@ -499,18 +500,21 @@ class MultiLineString:
         jointypes = dict([("bevel",clipper.JoinType.Square),
                           ("round",clipper.JoinType.Round),
                           ("miter",clipper.JoinType.Miter)])
-        jointype = jointypes[jointype]
         #Note: buffer on multipolygon automatically dissolves if it ends up intersecting itself
         alllines = []
         for geom in self.geoms:
-            #prep coords
-            templine = _PrepCoords(geom.coords, convertfloats=False)
+            #buffer each
+            templine = geom.buffer(buffersize, jointype=jointype, endtype=endtype)
             alllines.append(templine)
-        #execute buffer
-        resulttree = clipper.OffsetPolyLines(alllines, buffersize, jointype=jointype, endtype=endtype)
+        #union all buffers
+        subjpolys = alllines[0]
+        clippolys = alllines[1:]
+        result = _Clip(subjpolys, clippolys, "union")
+        return result
+        #resulttree = clipper.OffsetPolyLines(alllines, buffersize, jointype=jointype, endtype=endtype)
         #finally create and return geom
-        geom = _ResultTree2Geom(resulttree)
-        return geom
+        #geom = _ResultTree2Geom(resulttree)
+        #return geom
     ### Other
     def view(self, imagesize=None, css=None):
         """

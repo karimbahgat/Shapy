@@ -1,8 +1,9 @@
 #TO ADD
-- add distance method
+- complete the distance methods for all types
 - add buffer to point and multipoint as well
 - give option of dissolving or not when doing buffer, thus multigeoms should use their childs' buffer method and then decide whether to do union or return buffers as potentially overlapping geoms. 
 - add final comparison methods like contains, within, etc. 
 
 #TO FIX
 - buffer does not work for multilinestring, should buffer each line separately and then maybe union them.
+- buffer for normal lines is weird, should use own function from pydraw geomhelper.

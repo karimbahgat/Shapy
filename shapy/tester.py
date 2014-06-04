@@ -57,9 +57,9 @@ def typetesting(VIEWGEOMS=False):
     print("    area %s"%ring.area)
     print("    length %s"%ring.length)
     print("    bounds %s"%ring.bounds)
-    print("")
     if VIEWGEOMS:
         print("rings have no view method")
+    print("")
 
     #polygon with holes
     polygon = Polygon(exterior=[(1,1),(1,10),(10,10),(10,1),(1,1)], interiors=[[(4,4),(4,9),(9,9),(9,4),(4,4)], [(1.2,1.2),(1.2,3.9),(3.9,3.9),(3.9,1.2),(1.2,1.2)]])
@@ -134,7 +134,7 @@ def distancetesting(VIEWGEOMS=False):
     if VIEWGEOMS:
         #WARNING, THE RESULTS SETUP WILL CHANGE SO THIS CODE WILL FAIL
         import pydraw
-        css = pydraw.CoordinateSystem([0,0,60,60])
+        css = pydraw.CoordinateSystem([0,0,11,11])
         img = pydraw.Image(400,400,css=css)
         #closestpoint = result["closestpoint_line"]
         img.drawcircle(*point.coords[0], fillsize=15, fillcolor=(222,0,0))
@@ -206,9 +206,11 @@ def uniontesting(VIEWGEOMS=False):
     import geovis.shapefile_fork as pyshp
     cshapesfile = "D:/Test Data/cshapes/cshapes.shp"
     natearthfile = "D:/Test Data/necountries/necountries.shp"
+    linesfile = "D:/Test Data/lines/ne_50m_rivers_lake_centerlines.shp"
+    pointfile = "D:/Test Data/gtd_georef/gtd_georef.shp"
     reader = pyshp.Reader(cshapesfile)
     oldshape = False
-    stopindex = 10
+    stopindex = 9
     for index,shape in enumerate(reader.iterShapes()):
         geotype = shape.__geo_interface__["type"]
         geom = geoj2geom(shape)
@@ -216,15 +218,24 @@ def uniontesting(VIEWGEOMS=False):
         if oldshape:
             union = oldshape.union(geom)
             print("    %s"%union)
-            try: img.drawgeojson(union) #img.drawgeojson(geom)
-            except: pass
-            oldshape = union
+            try:
+                img.drawgeojson(union) #img.drawgeojson(geom)
+                oldshape = union
+            except:
+                #img2 = pydraw.Image(1000,500, background=(0,0,111), css=css)
+                #img2.drawgeojson(oldshape, fillcolor=(0,222,0))
+                #img2.drawgeojson(geom, fillcolor=(222,0,0))
+                #img2.view()
+                pass
         else:
             oldshape = geom
         if index == stopindex:
             if VIEWGEOMS:
+                img.drawgeojson(union)
+                img.view()
                 union.view(css=css)
             break
+    img.view()
 
 def RunTestSuite(VIEWGEOMS=True):
 
@@ -240,8 +251,9 @@ def RunTestSuite(VIEWGEOMS=True):
 
 if __name__ == "__main__":
     
-    distancetesting(True)
-    #RunTestSuite(VIEWGEOMS=False)
+    #distancetesting(True)
+    #uniontesting(False)
+    RunTestSuite(VIEWGEOMS=False)
 
 
 
