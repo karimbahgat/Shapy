@@ -142,49 +142,63 @@ def _Clip(subjectgeom, clipgeom, cliptype,
         topnode = resulttree
         geom = _ResultTree2Geom(topnode)
         return geom
-def _Dist(geom1, geom2, getclosestpoints=False, relativedist=False):
-    """
-    Used for measuring distances between geoms. 
-    Only singlegeoms are allowed, not multis. 
-    Actual distances are calculated in measure.py module.
-    Returns a dictionary with result entries. "mindist" is the
-    distance, the closest point on a polygon is given as
-    "closestpoint_poly", while for a linestring it is 
-    "closestpoint_line". Points don't generate any closestpoint
-    values. However, this is a bit iffy and not yet implemented
-    and will change. 
-    """
-    typecombi = _TypeCombi(geom1, geom2)
-    #then measure distance bw different shapetypes
-    if typecombi == "pointline":
-        if geom1.geom_type == "LineString": geom1,geom2 = geom2,geom1
-        results = measure.dist_point2lines(geom1.coords[0], geom2.coords, getclosestpoint=getclosestpoints, relativedist=relativedist)
-    elif typecombi == "linepoly":
-        if geom1.geom_type == "Polygon": geom1,geom2 = geom2,geom1
-        polyandholes = geom2.exterior.coords
-        if geom2.interiors: polyandholes.extend(geom2.interiors)
-        results = measure.dist_lines2poly(geom1.coords, polyandholes, getclosestpoints=getclosestpoints, relativedist=relativedist)
-    elif typecombi == "polypoint":
-        if geom1.geom_type == "Point": geom1,geom2 = geom2,geom1
-        polyandholes = [ geom1.exterior.coords ]
-        if geom1.interiors: polyandholes.extend([hole.coords for hole in geom1.interiors])
-        results = measure.dist_poly2point(polyandholes, geom2.coords[0], getclosestpoint=getclosestpoints, relativedist=relativedist)
-    #or same types
-    elif typecombi == "pointpoint":
-        mindist = measure.dist_point2point(geom1.coords[0], geom2.coords[0], relativedist=relativedist)
-        results = {"mindist":mindist}
-    elif typecombi == "lineline":
-        results = measure.dist_lines2lines(geom1.coords, geom2.coords, getclosestpoints=getclosestpoints, relativedist=relativedist)
-    elif typecombi == "polypoly":
-        polyandholes1 = [ geom1.exterior.coords ]
-        if geom1.interiors: polyandholes.extend(geom1.interiors)
-        polyandholes2 = geom2.exterior.coords
-        if geom2.interiors: polyandholes.extend([hole.coords for hole in geom2.interiors])
-        results = measure.dist_poly2poly(polyandholes1, polyandholes2, getclosestpoints=getclosestpoints, relativedist=relativedist)
-    #finally create geoms out of closest geoms and points, and
-    #   add to result dict if desired.
-    #...
-    return results
+##def _Dist(geom1, geom2, getclosestpoints=False, relativedist=False):
+##    """
+##    Used for measuring distances between geoms. 
+##    Only singlegeoms are allowed, not multis. 
+##    Actual distances are calculated in measure.py module.
+##    Returns a dictionary with result entries. "mindist" is the
+##    distance, the closest point on a polygon is given as
+##    "closestpoint_poly", while for a linestring it is 
+##    "closestpoint_line". Points don't generate any closestpoint
+##    values. However, this is a bit iffy and not yet implemented
+##    and will change. 
+##    """
+##    #then measure distance bw different shapetypes
+##    if geom1.geom_type == "Point":
+##        if geom2.geom_type == "LineString":
+##            pass
+##        elif geom2.geom_type == "Polygon":
+##            pass
+##        elif geom2.geom_type == "Point":
+##            pass
+##    elif geom1.geom_type == "LineString":
+##        if geom2.geom_type == "Polygon":
+##            pass
+##        elif geom2.geom_type == "Point":
+##            pass
+##        elif geom2.geom_type == "LineString":
+##            pass
+##
+##    if typecombi == "pointline":
+##        if geom1.geom_type == "LineString": geom1,geom2 = geom2,geom1
+##        results = measure.dist_point2lines(geom1.coords[0], geom2.coords, getclosestpoint=getclosestpoints, relativedist=relativedist)
+##    elif typecombi == "linepoly":
+##        if geom1.geom_type == "Polygon": geom1,geom2 = geom2,geom1
+##        polyandholes = geom2.exterior.coords
+##        if geom2.interiors: polyandholes.extend(geom2.interiors)
+##        results = measure.dist_lines2poly(geom1.coords, polyandholes, getclosestpoints=getclosestpoints, relativedist=relativedist)
+##    elif typecombi == "polypoint":
+##        if geom1.geom_type == "Point": geom1,geom2 = geom2,geom1
+##        polyandholes = [ geom1.exterior.coords ]
+##        if geom1.interiors: polyandholes.extend([hole.coords for hole in geom1.interiors])
+##        results = measure.dist_poly2point(polyandholes, geom2.coords[0], getclosestpoint=getclosestpoints, relativedist=relativedist)
+##    #or same types
+##    elif typecombi == "pointpoint":
+##        mindist = measure.dist_point2point(geom1.coords[0], geom2.coords[0], relativedist=relativedist)
+##        results = {"mindist":mindist}
+##    elif typecombi == "lineline":
+##        results = measure.dist_lines2lines(geom1.coords, geom2.coords, getclosestpoints=getclosestpoints, relativedist=relativedist)
+##    elif typecombi == "polypoly":
+##        polyandholes1 = [ geom1.exterior.coords ]
+##        if geom1.interiors: polyandholes.extend(geom1.interiors)
+##        polyandholes2 = geom2.exterior.coords
+##        if geom2.interiors: polyandholes.extend([hole.coords for hole in geom2.interiors])
+##        results = measure.dist_poly2poly(polyandholes1, polyandholes2, getclosestpoints=getclosestpoints, relativedist=relativedist)
+##    #finally create geoms out of closest geoms and points, and
+##    #   add to result dict if desired.
+##    #...
+##    return results
 
 ##def _Compare(geom1, geom2, comparetype):
 ##    """
@@ -283,25 +297,55 @@ class Point:
         othertype = other.geom_type
         #begin measuring
         if othertype == "Point":
-            minresult = _Dist(self, other, getclosestpoints=getclosestpoints)
+            mindist = measure.dist_point2point(self.coords[0], other.coords[0])
+            minresult = {"mindist":mindist}
         elif othertype == "MultiPoint":
-            _firstresult = _Dist(self, other.geoms[0], getclosestpoints=getclosestpoints, relativedist=True)
-            mindist = _firstresult["mindist"]
+            _firstdist = measure.dist_point2point(self.coords[0], other.geoms[0].coords[0], relativedist=True)
+            _firstresult = {"mindist":_firstdist, "closestpoint_other":other.geoms[0].coords[0]}
+            mindist = _firstresult
             minresult = _firstresult
-            for geom in other.geoms:
-                _result = _Dist(self, geom, getclosestpoints=getclosestpoints, relativedist=True)
-                _dist = _result["mindist"]
-                if _dist < mindist: mindist = _dist
+            for othergeom in other.geoms:
+                _dist = measure.dist_point2point(self.coords[0], othergeom.coords[0], relativedist=True)
+                if _dist < mindist:
+                    mindist = _dist
+                    if getclosestpoints: minresult = {"mindist":_dist, "closestpoint_other":othergeom.coords[0]}
+                    else: minresult = {"mindist":_dist}
             mindist = math.sqrt(mindist)
             minresult["mindist"] = mindist
         elif othertype == "LineString":
-            minresult = _Dist(self, other, getclosestpoints=getclosestpoints)
-        #elif othertype == "MultiLineString":
-        #    pass
+            minresult = measure.dist_point2lines(self.coords[0], other.coords, getclosestpoint=getclosestpoints)
+        elif othertype == "MultiLineString":
+            _firstresult = measure.dist_point2lines(self.coords[0], other.geoms[0].coords, getclosestpoint=getclosestpoints, relativedist=True)
+            mindist = _firstresult["mindist"]
+            minresult = _firstresult
+            for othergeom in other.geoms:
+                _result = measure.dist_point2lines(self.coords[0], othergeom.coords, getclosestpoint=getclosestpoints, relativedist=True)
+                _dist = _result["mindist"]
+                if _dist < mindist:
+                    mindist = _dist
+                    minresult = _result
+            mindist = math.sqrt(mindist)
+            minresult["mindist"] = mindist
         elif othertype == "Polygon":
-            minresult = _Dist(self, other, getclosestpoints=getclosestpoints)
-        #elif othertype == "MultiPolygon":
-        #    pass
+            polyandholes = [ other.exterior.coords ]
+            if other.interiors: polyandholes.extend([hole.coords for hole in other.interiors])
+            minresult = measure.dist_point2poly(self.coords[0], polyandholes, getclosestpoint=getclosestpoints)
+        elif othertype == "MultiPolygon":
+            _firstpolyandholes = [ other.geoms[0].exterior.coords ]
+            if other.geoms[0].interiors: polyandholes.extend([hole.coords for hole in other.geoms[0].interiors])
+            _firstresult = measure.dist_point2poly(self.coords[0], _firstpolyandholes, getclosestpoint=getclosestpoints, relativedist=True)
+            mindist = _firstresult["mindist"]
+            minresult = _firstresult
+            for othergeom in other.geoms:
+                _polyandholes = [ othergeom.exterior.coords ]
+                if othergeom.interiors: polyandholes.extend([hole.coords for hole in othergeom.interiors])
+                _result = measure.dist_point2poly(self.coords[0], _polyandholes, getclosestpoint=getclosestpoints, relativedist=True)
+                _dist = _result["mindist"]
+                if _dist < mindist:
+                    mindist = _dist
+                    minresult = _result
+            mindist = math.sqrt(mindist)
+            minresult["mindist"] = mindist
         return minresult
     ### Other
     def view(self, imagesize=None, crs=None, fillcolor=(111,111,111), outlinecolor=(0,0,0)):
@@ -821,6 +865,12 @@ class MultiPolygon:
     def _addtoclipper(self, clipperobj, addtype):
         for eachmulti in self.geoms:
             eachmulti._addtoclipper(clipperobj, addtype)
+
+if __name__ == "__main__":
+    import shapy
+    import shapy.tester as tester
+    tester.distancetesting(True)
+    #tester.RunTestSuite(viewgeoms=False)
 
 
 

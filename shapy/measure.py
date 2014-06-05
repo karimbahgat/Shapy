@@ -16,6 +16,7 @@ def dist_point2point(p1, p2, relativedist=False):
     else: dist = math.sqrt(xdiff*xdiff + ydiff*ydiff)
     return dist
 
+
 def dist_point2lines(point, lines, getclosestpoint=False, relativedist=False):
     """
     Returns a dictionary, with optional closest point on line
@@ -23,19 +24,31 @@ def dist_point2lines(point, lines, getclosestpoint=False, relativedist=False):
     _pointtuple = point
     _firstlineseg = lines[:2]
     mindist,_closestpoint = _line2point(_firstlineseg, point=_pointtuple, getclosestpoint=True, relativedist=True)
-    closestpoint_line = _closestpoint
+    closestpoint_other = _closestpoint
     for _lineseg in _pairwise(lines):
         dist,_closestpoint = _line2point(_lineseg, point=_pointtuple, getclosestpoint=True, relativedist=True)
         if dist < mindist:
             mindist = dist
-            closestpoint_line = _closestpoint
+            closestpoint_other = _closestpoint
     if not relativedist:
         mindist = math.sqrt(mindist)
-    if getclosestpoint: results = {"mindist":mindist, "closestpoint_line":closestpoint_line}
+    if getclosestpoint: results = {"mindist":mindist, "closestpoint_other":closestpoint_other}
     else: results = {"mindist":mindist}
     return results
 
+def dist_lines2point(lines, point, getclosestpoint=False, relativedist=False):
+    result = dist_point2lines(point, lines, getclosestpoint=getclosestpoint, relativedist=relativedist)
+    #then swap position of closestpoint bc opposite
+    if getclosestpoint:
+        closestpoint_self = result["closestpoint_other"]
+        del result["closestpoint_other"]
+        result["closestpoint_self"] = closestpoint_self
+    return result
+
 def dist_lines2lines(lines1, lines2, getclosestpoints=False, relativedist=False):
+    #see eg http://mathforum.org/library/drmath/view/51980.html
+    # or http://mathforum.org/library/drmath/view/51926.html
+    # or https://answers.yahoo.com/question/index?qid=20110507163534AAgvfQF
     pass
 
 def dist_lines2poly(lines, poly, getclosestpoints=False, relativedist=False):
@@ -52,18 +65,28 @@ def dist_poly2point(poly, point, getclosestpoint=False, relativedist=False):
         minresult = {"mindist":0}
         return minresult
     #first measure distance from exterior
-    minresult = dist_point2lines(point, lines=exterior, getclosestpoint=getclosestpoint, relativedist=True)
+    minresult = dist_lines2point(lines=exterior, point=point, getclosestpoint=getclosestpoint, relativedist=True)
     mindist = minresult["mindist"]
     #then from holes
     for hole in holes:
-        _result = dist_point2lines(point, lines=hole, getclosestpoint=getclosestpoint, relativedist=True)
+        _result = dist_lines2point(lines=hole, point=point, getclosestpoint=getclosestpoint, relativedist=True)
         _dist = _result["mindist"]
         if _dist < mindist:
+            mindist = _dist
             minresult = _result
     if not relativedist:
         mindist = minresult["mindist"]
         minresult["mindist"] = math.sqrt(mindist)
     return minresult
+
+def dist_point2poly(point, poly, getclosestpoint=False, relativedist=False):
+    result = dist_poly2point(poly, point, getclosestpoint=getclosestpoint, relativedist=relativedist)
+    #then swap position of closestpoint bc opposite
+    if getclosestpoint:
+        closestpoint_other = result["closestpoint_self"]
+        del result["closestpoint_self"]
+        result["closestpoint_other"] = closestpoint_other
+    return result
             
 def dist_poly2poly(lines, poly, getclosestpoints=False, relativedist=False):
     #loop polyedges of both and use line2line func

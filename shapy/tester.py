@@ -95,51 +95,97 @@ def distancetesting(VIEWGEOMS=False):
     #basic point to point distance test        
     p1 = Point(0,0)
     p2 = Point(100,100)
-    dist = p1.distance(p2)
-    print("p1 %s -> p2 %s = %s"%(p1.coords[0],p2.coords[0],dist))
+    result = p1.distance(p2)
+    print("point %s -> p2 %s = %s"%(p1.coords[0],p2.coords[0],result))
     
     #point to multipoint distance test        
     point = Point(0,0)
-    multipoint = MultiPoint([(100,100),(70,70),(10,10)])
-    dist = point.distance(multipoint, getclosestpoints=True)
-    print("p1 %s -> multipoint %s = %s"%(point.coords[0],[each.coords[0] for each in multipoint.geoms],dist))
+    multipoint = MultiPoint([(100,100),(100,10),(10,10),(10,100),(55,55)])
+    result = point.distance(multipoint, getclosestpoints=True)
+    print("point %s -> multipoint %s = %s"%(point.coords[0],[each.coords[0] for each in multipoint.geoms],result))
+    if VIEWGEOMS:
+        import pydraw
+        crs = pydraw.CoordinateSystem([0,0,120,120])
+        img = pydraw.Image(400,400,crs=crs)
+        closestpoint = Point(*result["closestpoint_other"])
+        img.drawgeojson(multipoint)
+        img.drawcircle(*point.coords[0], fillsize=15, fillcolor=(222,0,0))
+        img.drawcircle(*closestpoint.coords[0], fillsize=3, fillcolor=(0,222,0))
+        img.view()
 
     #point to line distance test
     point = Point(0.0,0.0)
     line = LineString([(32.0,23.0),(25.0,15.0),(10.0,30.0),(55.0,45.0)])
     result = point.distance(line, getclosestpoints=True)
-    print("p1 %s -> line %s = %s"%(point.coords[0],line.coords,result))
+    print("point %s -> line %s = %s"%(point.coords[0],line.coords,result))
     if VIEWGEOMS:
-        #WARNING, THE RESULTS SETUP WILL CHANGE SO THIS CODE WILL FAIL
         import pydraw
         crs = pydraw.CoordinateSystem([0,0,60,60])
         img = pydraw.Image(400,400,crs=crs)
-        #closestpoint = result["closestpoint_line"]
-        img.drawcircle(*point.coords[0], fillsize=15, fillcolor=(222,0,0))
+        closestpoint = Point(*result["closestpoint_other"])
         img.drawgeojson(line)
-        #img.drawcircle(*closestpoint.coords[0], fillsize=3, fillcolor=(0,222,0))
+        img.drawcircle(*point.coords[0], fillsize=15, fillcolor=(222,0,0))
+        img.drawcircle(*closestpoint.coords[0], fillsize=3, fillcolor=(0,222,0))
+        img.view()
+
+    #point to multiline distance test
+    point = Point(0.0,0.0)
+    multiline = MultiLineString([[(32.0,23.0),(25.0,15.0),(10.0,30.0),(55.0,45.0)], [(22,31),(24,12),(8,9)]])
+    result = point.distance(multiline, getclosestpoints=True)
+    print("point %s -> multiline %s = %s"%(point.coords[0],[geom.coords for geom in multiline.geoms],result))
+    if VIEWGEOMS:
+        import pydraw
+        crs = pydraw.CoordinateSystem([0,0,60,60])
+        img = pydraw.Image(400,400,crs=crs)
+        closestpoint = Point(*result["closestpoint_other"])
+        img.drawgeojson(multiline)
+        img.drawcircle(*point.coords[0], fillsize=15, fillcolor=(222,0,0))
+        img.drawcircle(*closestpoint.coords[0], fillsize=3, fillcolor=(0,222,0))
         img.view()
 
     #point to polygon distance test
     point = Point(0.0,0.0)
     polygon = Polygon([(52.0,23.0),(25.0,15.0),(10.0,30.0),(55.0,45.0)])
     result = point.distance(polygon, getclosestpoints=True)
-    print("p1 %s -> polygon %s = %s"%(point.coords[0],polygon.exterior.coords,result))
+    print("point %s -> polygon %s = %s"%(point.coords[0],polygon.exterior.coords,result))
+    if VIEWGEOMS:
+        import pydraw
+        crs = pydraw.CoordinateSystem([0,0,60,60])
+        img = pydraw.Image(400,400,crs=crs)
+        closestpoint = Point(*result["closestpoint_other"])
+        img.drawgeojson(polygon)
+        img.drawcircle(*point.coords[0], fillsize=15, fillcolor=(222,0,0))
+        img.drawcircle(*closestpoint.coords[0], fillsize=3, fillcolor=(0,222,0))
+        img.view()
 
     #point in polygon hole distance test
     point = Point(5,5)
     polygon = Polygon(exterior=[(1,1),(1,10),(10,10),(10,1),(1,1)], interiors=[[(4,4),(4,9),(9,9),(9,4),(4,4)], [(1.2,1.2),(1.2,3.9),(3.9,3.9),(3.9,1.2),(1.2,1.2)]])
     result = point.distance(polygon, getclosestpoints=True)
-    print("p1 %s -> inner polygon %s = %s"%(point.coords[0],polygon.exterior.coords,result))
+    print("point %s -> inner polygon %s = %s"%(point.coords[0],polygon.exterior.coords,result))
     if VIEWGEOMS:
-        #WARNING, THE RESULTS SETUP WILL CHANGE SO THIS CODE WILL FAIL
         import pydraw
         crs = pydraw.CoordinateSystem([0,0,11,11])
         img = pydraw.Image(400,400,crs=crs)
-        #closestpoint = result["closestpoint_line"]
-        img.drawcircle(*point.coords[0], fillsize=15, fillcolor=(222,0,0))
+        closestpoint = Point(*result["closestpoint_other"])
         img.drawgeojson(polygon)
-        #img.drawcircle(*closestpoint.coords[0], fillsize=3, fillcolor=(0,222,0))
+        img.drawcircle(*point.coords[0], fillsize=15, fillcolor=(222,0,0))
+        img.drawcircle(*closestpoint.coords[0], fillsize=3, fillcolor=(0,222,0))
+        img.view()
+
+    #point to multiline distance test
+    point = Point(0.0,0.0)
+    multipoly = MultiPolygon([([(32.0,23.0),(25.0,15.0),(41,30)], []),([(10.0,30.0),(55.0,45.0),(22,31),(24,12),(8,9)],[])])
+    result = point.distance(multipoly, getclosestpoints=True)
+    print("point %s -> multipoly %s = %s"%(point.coords[0],[geom.exterior.coords for geom in multipoly.geoms],result))
+    if VIEWGEOMS:
+        import pydraw
+        crs = pydraw.CoordinateSystem([0,0,60,60])
+        img = pydraw.Image(400,400,crs=crs)
+        closestpoint = Point(*result["closestpoint_other"])
+        img.drawgeojson(multipoly)
+        img.drawcircle(*point.coords[0], fillsize=15, fillcolor=(222,0,0))
+        img.drawcircle(*closestpoint.coords[0], fillsize=3, fillcolor=(0,222,0))
         img.view()
 
     print("")
@@ -237,14 +283,14 @@ def uniontesting(VIEWGEOMS=False):
             break
     img.view()
 
-def RunTestSuite(VIEWGEOMS=True):
+def RunTestSuite(viewgeoms=True):
 
     ##################################################
     #BEGIN TESTING
-    typetesting(VIEWGEOMS=VIEWGEOMS)
-    distancetesting(VIEWGEOMS=VIEWGEOMS)
-    buffertesting(VIEWGEOMS=VIEWGEOMS)
-    uniontesting(VIEWGEOMS=VIEWGEOMS)
+    typetesting(VIEWGEOMS=viewgeoms)
+    distancetesting(VIEWGEOMS=viewgeoms)
+    buffertesting(VIEWGEOMS=viewgeoms)
+    uniontesting(VIEWGEOMS=viewgeoms)
     print("----------------------------")
     print("TESTS SUCCESSFULLY COMPLETED")
     ###################################################
@@ -253,7 +299,7 @@ if __name__ == "__main__":
     
     #distancetesting(True)
     #uniontesting(False)
-    RunTestSuite(VIEWGEOMS=False)
+    RunTestSuite(viewgeoms=False)
 
 
 
