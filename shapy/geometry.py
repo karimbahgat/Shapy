@@ -2,7 +2,8 @@
 
 #import stuff
 import itertools, math
-import clipper,measure
+import clipper,measure,pydraw
+from pydraw.geomhelper import _Line, _Bezier, _Arc, _Point
 
 #global settings
 PRECISION = 1000000000
@@ -288,9 +289,12 @@ class Point:
         geojson["coordinates"] = coords[0]
         return geojson
     ### Constructive methods
-    def buffer(self, buffersize, jointype="miter"):
+    def buffer(self, buffersize, jointype="miter", resolution=0.75):
         # for points use the _DoRound(pt, limit) function from inside _OffsetInternal
-        pass
+        _point = _Point(self.x, self.y)
+        buffercoords = _point.getbuffer(buffersize, resolution=resolution)
+        geom = Polygon(exterior=buffercoords)
+        return geom
     ### Comparison methods
     def distance(self, other, getclosestpoints=False):
         #MAYBE ADD getgeoms OPTION
@@ -300,52 +304,24 @@ class Point:
             mindist = measure.dist_point2point(self.coords[0], other.coords[0])
             minresult = {"mindist":mindist}
         elif othertype == "MultiPoint":
-            _firstdist = measure.dist_point2point(self.coords[0], other.geoms[0].coords[0], relativedist=True)
-            _firstresult = {"mindist":_firstdist, "closestpoint_other":other.geoms[0].coords[0]}
-            mindist = _firstresult
-            minresult = _firstresult
-            for othergeom in other.geoms:
-                _dist = measure.dist_point2point(self.coords[0], othergeom.coords[0], relativedist=True)
-                if _dist < mindist:
-                    mindist = _dist
-                    if getclosestpoints: minresult = {"mindist":_dist, "closestpoint_other":othergeom.coords[0]}
-                    else: minresult = {"mindist":_dist}
-            mindist = math.sqrt(mindist)
-            minresult["mindist"] = mindist
+            multilist = [geom.coords[0] for geom in other.geoms]
+            minresult = measure.dist_point2multipoint(self.coords[0], multilist, getclosestpoint=getclosestpoints)
         elif othertype == "LineString":
             minresult = measure.dist_point2lines(self.coords[0], other.coords, getclosestpoint=getclosestpoints)
         elif othertype == "MultiLineString":
-            _firstresult = measure.dist_point2lines(self.coords[0], other.geoms[0].coords, getclosestpoint=getclosestpoints, relativedist=True)
-            mindist = _firstresult["mindist"]
-            minresult = _firstresult
-            for othergeom in other.geoms:
-                _result = measure.dist_point2lines(self.coords[0], othergeom.coords, getclosestpoint=getclosestpoints, relativedist=True)
-                _dist = _result["mindist"]
-                if _dist < mindist:
-                    mindist = _dist
-                    minresult = _result
-            mindist = math.sqrt(mindist)
-            minresult["mindist"] = mindist
+            multilist = [geom.coords for geom in other.geoms]
+            minresult = measure.dist_point2multilines(self.coords[0], multilist, getclosestpoint=getclosestpoints)
         elif othertype == "Polygon":
             polyandholes = [ other.exterior.coords ]
             if other.interiors: polyandholes.extend([hole.coords for hole in other.interiors])
             minresult = measure.dist_point2poly(self.coords[0], polyandholes, getclosestpoint=getclosestpoints)
         elif othertype == "MultiPolygon":
-            _firstpolyandholes = [ other.geoms[0].exterior.coords ]
-            if other.geoms[0].interiors: polyandholes.extend([hole.coords for hole in other.geoms[0].interiors])
-            _firstresult = measure.dist_point2poly(self.coords[0], _firstpolyandholes, getclosestpoint=getclosestpoints, relativedist=True)
-            mindist = _firstresult["mindist"]
-            minresult = _firstresult
-            for othergeom in other.geoms:
-                _polyandholes = [ othergeom.exterior.coords ]
-                if othergeom.interiors: polyandholes.extend([hole.coords for hole in othergeom.interiors])
-                _result = measure.dist_point2poly(self.coords[0], _polyandholes, getclosestpoint=getclosestpoints, relativedist=True)
-                _dist = _result["mindist"]
-                if _dist < mindist:
-                    mindist = _dist
-                    minresult = _result
-            mindist = math.sqrt(mindist)
-            minresult["mindist"] = mindist
+            allpolys = []
+            for geom in other.geoms:
+                polyandholes = [ geom.exterior.coords ]
+                if geom.interiors: polyandholes.extend([hole.coords for hole in geom.interiors])
+                allpolys.append(polyandholes)
+            minresult = measure.dist_point2multipoly(self.coords[0], allpolys, getclosestpoint=getclosestpoints)                        
         return minresult
     ### Other
     def view(self, imagesize=None, crs=None, fillcolor=(111,111,111), outlinecolor=(0,0,0)):
@@ -395,9 +371,49 @@ class MultiPoint:
             if _y > ymax: ymax = _y
         return [xmin,ymin,xmax,ymax]
     ### Constructive methods
-    def buffer(self, buffersize, jointype="miter"):
+    def buffer(self, buffersize, jointype="miter", resolution=0.75, dissolve=True):
         # for points use the _DoRound(pt, limit) function from inside _OffsetInternal
-        pass
+        result = self.geoms[0].buffer(buffersize, resolution=resolution)
+        newgeoms = []
+        if len(self.geoms) > 1:
+            for geom in self.geoms:
+                buffergeom = geom.buffer(buffersize, resolution=resolution)
+                if dissolve:
+                    result = _Clip(result, buffergeom, "union")
+                else:
+                    newgeoms.append(buffergeom)
+            if not dissolve:
+                multipolycoords = [(eachmulti.exterior.coords,[]) for eachmulti in newgeoms]
+                result = MultiPolygon(multipolycoords)
+        return result
+    ### Comparison methods
+    def distance(self, other, getclosestpoints=False):
+        #MAYBE ADD getgeoms OPTION
+        selfcoords = [geom.coords[0] for geom in self.geoms]
+        othertype = other.geom_type
+        #begin measuring
+        if othertype == "Point":
+            minresult = measure.dist_multipoint2point(selfcoords, other.coords[0], getclosestpoint=getclosestpoints)
+        elif othertype == "MultiPoint":
+            multilist = [geom.coords[0] for geom in other.geoms]
+            minresult = measure.dist_multipoint2multipoint(selfcoords, multilist, getclosestpoints=getclosestpoints)
+        elif othertype == "LineString":
+            minresult = measure.dist_multipoint2lines(selfcoords, other.coords, getclosestpoints=getclosestpoints)
+        elif othertype == "MultiLineString":
+            multilist = [geom.coords for geom in other.geoms]
+            minresult = measure.dist_multipoint2multilines(selfcoords, multilist, getclosestpoints=getclosestpoints)
+        elif othertype == "Polygon":
+            polyandholes = [ other.exterior.coords ]
+            if other.interiors: polyandholes.extend([hole.coords for hole in other.interiors])
+            minresult = measure.dist_multipoint2poly(selfcoords, polyandholes, getclosestpoints=getclosestpoints)
+        elif othertype == "MultiPolygon":
+            allpolys = []
+            for geom in other.geoms:
+                polyandholes = [ geom.exterior.coords ]
+                if geom.interiors: polyandholes.extend([hole.coords for hole in geom.interiors])
+                allpolys.append(polyandholes)
+            minresult = measure.dist_multipoint2multipoly(selfcoords, allpolys, getclosestpoints=getclosestpoints)                        
+        return minresult
     ### Other
     def view(self, imagesize=None, crs=None, fillcolor=(111,111,111), outlinecolor=(0,0,0)):
         """
@@ -458,22 +474,111 @@ class LineString:
             length += _linelength
         return length
     ### Constructive methods
-    def buffer(self, buffersize, jointype="miter", endtype="project"):
-        jointypes = dict([("bevel",clipper.JoinType.Square),
-                          ("round",clipper.JoinType.Round),
-                          ("miter",clipper.JoinType.Miter)])
-        jointype = jointypes[jointype]
-        endtypes = dict([("butt",clipper.EndType.Butt),
-                         ("project",clipper.EndType.Square),
-                         ("round",clipper.EndType.Round),
-                         ("closed",clipper.EndType.Closed)])
-        endtype = endtypes[endtype]
-        #prep coords
-        alllines = [_PrepCoords(self.coords, convertfloats=False)]
-        #execute buffer
-        resulttree = clipper.OffsetPolyLines(alllines, buffersize, jointype=jointype, endtype=endtype)
-        #finally create and return geom
-        geom = _ResultTree2Geom(resulttree)
+    def buffer(self, buffersize, jointype="miter", endtype="project", resolution=0.75):
+        """
+        Warning: Still under construction, produces weird results.
+        """
+        def threewise(iterable):
+            a,_ = itertools.tee(iterable)
+            b,c = itertools.tee(_)
+            next(b, None)
+            next(c, None)
+            next(c, None)
+            return itertools.izip(a,b,c)
+        linepolygon_left = []
+        linepolygon_right = []
+        buffersize = buffersize/2.0
+        #the first line
+        (x1,y1),(x2,y2),(x3,y3) = self.coords[:3]
+        line1 = _Line(x1,y1,x2,y2)
+        line2 = _Line(x2,y2,x3,y3)
+        leftline,rightline = line1.getbuffersides(linebuffer=buffersize)
+        leftlinestart = leftline.tolist()[0]
+        rightlinestart = rightline.tolist()[0]
+        linepolygon_left.append(leftlinestart)
+        linepolygon_right.append(rightlinestart)
+        linepolygon = []
+        #then all mid areas
+        if jointype == "miter":
+            #sharp join style
+            for start,mid,end in threewise(self.coords):
+                (x1,y1),(x2,y2),(x3,y3) = start,mid,end
+                line1 = _Line(x1,y1,x2,y2)
+                line2 = _Line(x2,y2,x3,y3)
+                line1_left,line1_right = line1.getbuffersides(linebuffer=buffersize)
+                line2_left,line2_right = line2.getbuffersides(linebuffer=buffersize)
+                midleft = line1_left.intersect(line2_left, infinite=True)
+                midright = line1_right.intersect(line2_right, infinite=True)
+                if not midleft or not midright:
+                    #PROB FLOAT ERROR,SO NO INTERSECTION FOUND
+                    #CURRENTLY JUST SKIP DRAWING,BUT NEED BETTER HANDLING
+                    print("WARNING, midpoint intersection not found")
+                    return
+                #add coords
+                linepolygon.extend([linepolygon_left[-1],midleft])
+                linepolygon.extend([midright,linepolygon_right[-1]])
+                linepolygon_left.append(midleft)
+                linepolygon_right.append(midright)
+        elif jointype == "round":
+            #round
+            for start,mid,end in threewise(self.coords):
+                (x1,y1),(x2,y2),(x3,y3) = start,mid,end
+                line1 = _Line(x1,y1,x2,y2)
+                line2 = _Line(x2,y2,x3,y3)
+                line1_left,line1_right = line1.getbuffersides(linebuffer=buffersize)
+                line2_left,line2_right = line2.getbuffersides(linebuffer=buffersize)
+                midleft = line1_left.intersect(line2_left, infinite=True)
+                midright = line1_right.intersect(line2_right, infinite=True)
+                if not midleft or not midright:
+                    #PROB FLOAT ERROR,SO NO INTERSECTION FOUND
+                    #CURRENTLY JUST SKIP DRAWING,BUT NEED BETTER HANDLING
+                    print("WARNING, midpoint intersection not found")
+                    return
+                #ARC approach
+                ##midx,midy = x2,y2
+                ##oppositeangle = line1.anglebetween_inv(line2)
+                ##bwangle = line1.anglebetween_abs(line2)
+                ##leftangl,rightangl = oppositeangle-bwangle,oppositeangle+bwangle
+                ##leftcurve = _Arc(midx,midy,radius=buffersize,startangle=leftangl,endangle=rightangl)
+                ##rightcurve = _Arc(midx-buffersize,midy-buffersize,radius=buffersize,startangle=leftangl,endangle=rightangl) #[(midx,midy)] #how do inner arc?
+                leftcurve = _Bezier([line1_left.tolist()[1],midleft,line2_left.tolist()[0]], intervals=int(round(resolution*buffersize*3))).coords
+                rightcurve = _Bezier([line1_right.tolist()[1],midright,line2_right.tolist()[0]], intervals=int(round(resolution*buffersize*3))).coords
+                #add coords
+                linepolygon.append(linepolygon_left[-1])
+                linepolygon.extend(leftcurve)
+                linepolygon.extend(list(reversed(rightcurve)))
+                linepolygon.append(linepolygon_right[-1])
+                linepolygon_left.extend(leftcurve)
+                linepolygon_right.extend(rightcurve)
+        elif jointype == "bevel":
+            #flattened
+            for start,mid,end in threewise(self.coords):
+                (x1,y1),(x2,y2),(x3,y3) = start,mid,end
+                line1 = _Line(x1,y1,x2,y2)
+                line2 = _Line(x2,y2,x3,y3)
+                line1_left,line1_right = line1.getbuffersides(linebuffer=buffersize)
+                line2_left,line2_right = line2.getbuffersides(linebuffer=buffersize)
+                midleft = line1_left.tolist()[1]
+                midright = line1_right.tolist()[1]
+                if not midleft or not midright:
+                    #PROB FLOAT ERROR,SO NO INTERSECTION FOUND
+                    #CURRENTLY JUST SKIP DRAWING,BUT NEED BETTER HANDLING
+                    print("WARNING, midpoint intersection not found")
+                    return
+                #add coords
+                linepolygon.extend([linepolygon_left[-1],midleft])
+                linepolygon.extend([midright,linepolygon_right[-1]])
+                linepolygon_left.append(midleft)
+                linepolygon_right.append(midright)
+        #finally add last line coords
+        (x1,y1),(x2,y2) = self.coords[-2:]
+        lastline = _Line(x1,y1,x2,y2)
+        leftline,rightline = lastline.getbuffersides(linebuffer=buffersize)
+        leftlinestart = leftline.tolist()[1]
+        rightlinestart = rightline.tolist()[1]
+        linepolygon.extend([linepolygon_left[-1],leftlinestart])
+        linepolygon.extend([rightlinestart,linepolygon_right[-1]])
+        geom = Polygon(exterior=linepolygon)
         return geom
     ### Other
     def view(self, imagesize=None, crs=None, fillcolor=(111,111,111), outlinecolor=(0,0,0)):
@@ -539,26 +644,20 @@ class MultiLineString:
             if _ymax > ymax: ymax = _ymax
         return [xmin,ymin,xmax,ymax]
     ### Constructive methods
-    def buffer(self, buffersize, jointype="miter", endtype="project"):
-        "NOTE: Fails for multilines!"
-        jointypes = dict([("bevel",clipper.JoinType.Square),
-                          ("round",clipper.JoinType.Round),
-                          ("miter",clipper.JoinType.Miter)])
-        #Note: buffer on multipolygon automatically dissolves if it ends up intersecting itself
-        alllines = []
-        for geom in self.geoms:
-            #buffer each
-            templine = geom.buffer(buffersize, jointype=jointype, endtype=endtype)
-            alllines.append(templine)
-        #union all buffers
-        subjpolys = alllines[0]
-        clippolys = alllines[1:]
-        result = _Clip(subjpolys, clippolys, "union")
+    def buffer(self, buffersize, jointype="miter", endtype="project", resolution=0.75, dissolve=True):
+        result = self.geoms[0].buffer(buffersize, resolution=resolution)
+        newgeoms = []
+        if len(self.geoms) > 1:
+            for geom in self.geoms:
+                buffergeom = geom.buffer(buffersize, resolution=resolution)
+                if dissolve:
+                    result = _Clip(result, buffergeom, "union")
+                else:
+                    newgeoms.append(buffergeom)
+            if not dissolve:
+                multipolycoords = [(eachmulti.exterior.coords,[]) for eachmulti in newgeoms]
+                result = MultiPolygon(multipolycoords)
         return result
-        #resulttree = clipper.OffsetPolyLines(alllines, buffersize, jointype=jointype, endtype=endtype)
-        #finally create and return geom
-        #geom = _ResultTree2Geom(resulttree)
-        #return geom
     ### Other
     def view(self, imagesize=None, crs=None, fillcolor=(111,111,111), outlinecolor=(0,0,0)):
         """
@@ -869,7 +968,8 @@ class MultiPolygon:
 if __name__ == "__main__":
     import shapy
     import shapy.tester as tester
-    tester.distancetesting(True)
+    tester.buffertesting(True)
+    #tester.distancetesting(True)
     #tester.RunTestSuite(viewgeoms=False)
 
 

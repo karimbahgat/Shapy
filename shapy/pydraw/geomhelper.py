@@ -5,6 +5,27 @@ class _Point:
     def __init__(self, x, y):
         self.x = x
         self.y = y
+    def getbuffer(self, fillsize, resolution=0.75):
+        #alternative circle algorithms
+            ### BEST: http://yellowsplash.wordpress.com/2009/10/23/fast-antialiased-circles-and-ellipses-from-xiaolin-wus-concepts/
+            #http://stackoverflow.com/questions/1201200/fast-algorithm-for-drawing-filled-circles
+            #http://willperone.net/Code/codecircle.php
+            #http://www.mathopenref.com/coordcirclealgorithm.html
+        #use bezier circle path
+        size = fillsize
+        c = 0.55191502449*size #0.55191502449 http://spencermortensen.com/articles/bezier-circle/ #alternative nr: 0.551784 http://www.tinaja.com/glib/ellipse4.pdf
+        relcontrolpoints = [(0,size),(c,size),(size,c),
+                 (size,0),(size,-c),(c,-size),
+                 (0,-size),(-c,-size),(-size,-c),
+                 (-size,0),(-size,c),(-c,size),(0,size)]
+        circlepolygon = []
+        oldindex = 1
+        for index in xrange(4):
+            cornerpoints = relcontrolpoints[oldindex-1:oldindex+3]
+            cornerpoints = [(self.x+relx,self.y+rely) for relx,rely in cornerpoints]
+            circlepolygon.extend(_Bezier(cornerpoints, intervals=int(round(resolution*fillsize*3))).coords)
+            oldindex += 3
+        return circlepolygon
 
 class _Line:
     def __init__(self, x1,y1,x2,y2):
