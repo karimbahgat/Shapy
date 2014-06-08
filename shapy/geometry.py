@@ -266,6 +266,12 @@ def geoj2geom(shapeobj):
 class Point:
     #NOT FINISHED, LACKING SET THEORY METHODS
     def __init__(self, x, y):
+        """
+
+        | __options__ | __description__ 
+        | --- | ---
+        | x/y | the x and y coordinates of the point. 
+        """
         #NOTE: coords is an xy-tuple nested inside a list
         self.geom_type = "Point"
         #prep coords for clip analysis
@@ -298,6 +304,18 @@ class Point:
         return geom
     ### Comparison methods
     def distance(self, other, getclosestpoints=False):
+        """
+        Measures the distance from the main to the other geometry. Returns a
+        dictionary with several pieces of information, depending on the
+        "getclosestpoints" option. The minimum distance is accessed with the
+        keyword "mindist". 
+
+        | __options__ | __description__ 
+        | --- | --- 
+        | *getclosestpoints | an optional boolean for whether to also return the points on each geometry that are closest to eachother. These are accessed from the result-dictionary with the keywords "closestpoint_self" and "closestpoint_other". Default is False. 
+
+        Note: Currently, only Point and MultiPoint support this method. 
+        """
         #MAYBE ADD getgeoms OPTION
         othertype = other.geom_type
         #begin measuring
@@ -325,11 +343,17 @@ class Point:
             minresult = measure.dist_point2multipoly(self.coords[0], allpolys, getclosestpoint=getclosestpoints)                        
         return minresult
     ### Other
-    def view(self, imagesize=None, crs=None, fillcolor=(111,111,111), outlinecolor=(0,0,0)):
+    def view(self, imagesize=None, crs=None, tickunit="default", fillcolor=(111,111,111), outlinecolor=(0,0,0)):
         """
         Draws and pops up a window with the shape.
 
-        - imagesize is an optional two-tuple of the pixel size of the viewimage in the form of (pixelwidth,pixelheight). Default is 400 by 400.
+        | __options__ | __description__ 
+        | --- | --- 
+        | *imagesize | an optional two-tuple of the pixel size of the viewimage in the form of (pixelwidth,pixelheight). Default is 400 by 400.
+        | *crs | a CoordinateSystem() instance used to map the coordinate/zoom extent.
+        | *tickunit | How often (distance between each) to show a tick. Ticks are shown equally frequently on both the x and y axis to avoid shape distortion. Default is every 10 percent of the width of the coordinate system or image size.
+        | *fillcolor | A 3-tuple RGB color to fill the shape with. None leaves it hollow. 
+        | *outlinecolor | A 3-tuple RGB color to outline the shape with. None disables the outline. 
         """
         import pydraw
         if not imagesize: imagesize = (400,400)
@@ -340,12 +364,23 @@ class Point:
             crs_bounds = [x1-xoffset, y1-yoffset, x2+xoffset, y2+yoffset]
             crs = pydraw.CoordinateSystem(crs_bounds)
         img = pydraw.Image(*imagesize, background=(250,250,250), crs=crs)
+        if tickunit:
+            if tickunit == "default":
+                #default to show tick every 10 percent of xwidth on both x and y axis
+                tickunit = crs.xwidth/10.0
+            img.drawgridticks(every_x=tickunit, every_y=tickunit)
         img.drawgeojson(self, fillcolor=fillcolor, outlinecolor=outlinecolor)
         img.view()
 
 class MultiPoint:
     #NOT FINISHED
     def __init__(self, points):
+        """
+
+        | __options__ | __description__ 
+        | --- | ---
+        | points | a list of xy points.
+        """
         self.geom_type = "MultiPoint"
         #prep coords for clip analysis
         self.geoms = [Point(*point) for point in points]
@@ -384,6 +419,18 @@ class MultiPoint:
         return result
     ### Comparison methods
     def distance(self, other, getclosestpoints=False):
+        """
+        Measures the distance from the main to the other geometry. Returns a
+        dictionary with several pieces of information, depending on the
+        "getclosestpoints" option. The minimum distance is accessed with the
+        keyword "mindist". 
+
+        | __options__ | __description__ 
+        | --- | --- 
+        | *getclosestpoints | an optional boolean for whether to also return the points on each geometry that are closest to eachother. These are accessed from the result-dictionary with the keywords "closestpoint_self" and "closestpoint_other". Default is False. 
+
+        Note: Currently, only Point and MultiPoint support this method. 
+        """
         #MAYBE ADD getgeoms OPTION
         selfcoords = [geom.coords[0] for geom in self.geoms]
         othertype = other.geom_type
@@ -411,11 +458,17 @@ class MultiPoint:
             minresult = measure.dist_multipoint2multipoly(selfcoords, allpolys, getclosestpoints=getclosestpoints)                        
         return minresult
     ### Other
-    def view(self, imagesize=None, crs=None, fillcolor=(111,111,111), outlinecolor=(0,0,0)):
+    def view(self, imagesize=None, crs=None, tickunit="default", fillcolor=(111,111,111), outlinecolor=(0,0,0)):
         """
         Draws and pops up a window with the shape.
 
-        - imagesize is an optional two-tuple of the pixel size of the viewimage in the form of (pixelwidth,pixelheight). Default is 400 by 400.
+        | __options__ | __description__ 
+        | --- | --- 
+        | *imagesize | an optional two-tuple of the pixel size of the viewimage in the form of (pixelwidth,pixelheight). Default is 400 by 400.
+        | *crs | a CoordinateSystem() instance used to map the coordinate/zoom extent.
+        | *tickunit | How often (distance between each) to show a tick. Ticks are shown equally frequently on both the x and y axis to avoid shape distortion. Default is every 10 percent of the width of the coordinate system or image size.
+        | *fillcolor | A 3-tuple RGB color to fill the shape with. None leaves it hollow. 
+        | *outlinecolor | A 3-tuple RGB color to outline the shape with. None disables the outline. 
         """
         import pydraw
         if not imagesize: imagesize = (400,400)
@@ -423,23 +476,34 @@ class MultiPoint:
             x1,y1,x2,y2 = self.bounds
             xwidth = x2-x1
             yheight = y2-y1
-            coordheightratio = yheight/float(xwidth)
-            screenheightratio = imagesize[1]/float(imagesize[0])
-            if coordheightratio < screenheightratio:
-                yheight = xwidth/float(coordheightratio)
-            elif coordheightratio > screenheightratio:
-                xwidth = yheight/float(screenheightratio)
+            if xwidth > yheight:
+                yheight = xwidth
+                y2 = y1+xwidth
+            elif yheight > xwidth:
+                xwidth = yheight
+                x2 = x1+yheight
             xoffset = xwidth*0.1
             yoffset = yheight*0.1
             crs_bounds = [x1-xoffset, y1-yoffset, x2+xoffset, y2+yoffset]
             crs = pydraw.CoordinateSystem(crs_bounds)
         img = pydraw.Image(*imagesize, background=(250,250,250), crs=crs)
+        if tickunit:
+            if tickunit == "default":
+                #default to show tick every 10 percent of xwidth on both x and y axis
+                tickunit = crs.xwidth/10.0
+            img.drawgridticks(every_x=tickunit, every_y=tickunit)
         img.drawgeojson(self, fillcolor=fillcolor, outlinecolor=outlinecolor)
         img.view()
         
 class LineString:
     #NOT FINISHED, LACKING SET THEORY METHODS
     def __init__(self, coordinates):
+        """
+
+        | __options__ | __description__ 
+        | --- | ---
+        | coordinates | a coordinate list of each xy pair in a linestring. 
+        """
         self.geom_type = "LineString"
         #prep coords for clip analysis
         preppedcoords = _PrepCoords(coordinates)
@@ -478,7 +542,7 @@ class LineString:
     ### Constructive methods
     def buffer(self, buffersize, jointype="miter", endtype="project", resolution=0.75, dissolve=True):
         """
-        Warning: Still under construction, produces weird results.
+        Note: Currently only "miter" is supported. Endtype does not yet have any effect.
         """
         def threewise(iterable):
             a,_ = itertools.tee(iterable)
@@ -519,52 +583,72 @@ class LineString:
                     #add coords
                     linepolygon_left.append(midleft)
                     linepolygon_right.append(midright)
-            elif jointype == "round":
-                #round
-                #DOESNT WORK YET...
-                for start,mid,end in threewise(self.coords):
-                    (x1,y1),(x2,y2),(x3,y3) = start,mid,end
-                    line1 = _Line(x1,y1,x2,y2)
-                    line2 = _Line(x2,y2,x3,y3)
-                    line1_left,line1_right = line1.getbuffersides(linebuffer=buffersize)
-                    line2_left,line2_right = line2.getbuffersides(linebuffer=buffersize)
-                    midleft = line1_left.intersect(line2_left, infinite=True)
-                    midright = line1_right.intersect(line2_right, infinite=True)
-##                    if not midleft or not midright:
-##                        #PROB FLOAT ERROR,SO NO INTERSECTION FOUND
-##                        #CURRENTLY JUST SKIP DRAWING,BUT NEED BETTER HANDLING
-##                        print("WARNING, midpoint intersection not found")
-##                        return
-##                    #ARC approach
-##                    midx,midy = x2,y2
-##                    oppositeangle = line1.anglebetween_inv(line2)
-##                    #innerangle = oppositeangle-180
-##                    #leftcurve = _Arc(midx,midy,radius=buffersize,facing=oppositeangle,opening=bwangle)
-##                    #rightcurve = [midright] #how do inner arc?
+##            elif jointype == "round":
+##                #round
+##                #DOESNT WORK YET...
+##                for start,mid,end in threewise(self.coords):
+##                    (x1,y1),(x2,y2),(x3,y3) = start,mid,end
+##                    line1 = _Line(x1,y1,x2,y2)
+##                    line2 = _Line(x2,y2,x3,y3)
+##                    line1_left,line1_right = line1.getbuffersides(linebuffer=buffersize)
+##                    line2_left,line2_right = line2.getbuffersides(linebuffer=buffersize)
+##                    midleft = line1_left.intersect(line2_left, infinite=True)
+##                    midright = line1_right.intersect(line2_right, infinite=True)
+####                    if not midleft or not midright:
+####                        #PROB FLOAT ERROR,SO NO INTERSECTION FOUND
+####                        #CURRENTLY JUST SKIP DRAWING,BUT NEED BETTER HANDLING
+####                        print("WARNING, midpoint intersection not found")
+####                        return
+####                    #ARC approach
+####                    midx,midy = x2,y2
+####                    line1_rev = _Line(x2,y2,x1,y1) #reverse it so same origin point
+####                    #get inner and outer angles
+####                    innerangle = (line1_rev.getangle()+line2.getangle())/2.0
+####                    if innerangle > 180:
+####                        oppositeangle = innerangle-180
+####                    elif innerangle < 180: oppositeangle = innerangle+180
+####                    #then determine which side gets the curve
+####                    bwangle = line1.anglediff(line2)
+####                    if bwangle < 0:
+####                        rightcurve = _Arc(midx,midy,buffersize,facing=oppositeangle,opening=bwangle)
+####                        leftcurve = [midleft]
+####                    else:
+####                        rightcurve = [midright]
+####                        leftcurve = _Arc(midx,midy,buffersize,facing=oppositeangle,opening=bwangle)
+####                    #
+####                    #NEW BEZIER APPROACH
+####                    midx,midy = x2,y2
+####                    line1_rev = _Line(x2,y2,x1,y1) #reverse it so same origin point
+####                    #get inner and outer angles
+####                    innerangle = (line1_rev.getangle()+line2.getangle())/2.0
+####                    if innerangle > 180:
+####                        oppositeangle = innerangle-180
+####                    elif innerangle < 180: oppositeangle = innerangle+180
+####                    oppositeangle_rad = math.radians(oppositeangle)
+####                    #then find controlpoint in direction angle
+####                    if oppositeangle < 90:
+####                        outercurvecontrol = (midx+buffersize*math.cos(oppositeangle_rad),midy-buffersize*math.sin(oppositeangle_rad))
+####                    elif oppositeangle < 180:
+####                        outercurvecontrol = (midx-buffersize*math.cos(oppositeangle_rad),midy+buffersize*math.sin(oppositeangle_rad))
+####                    elif oppositeangle < 270:
+####                        outercurvecontrol = (midx-buffersize*math.cos(oppositeangle_rad),midy-buffersize*math.sin(oppositeangle_rad))
+####                    else:
+####                        outercurvecontrol = (midx+buffersize*math.cos(oppositeangle_rad),midy+buffersize*math.sin(oppositeangle_rad))
+####                    #then determine which side gets the curve
+####                    bwangle = line1.anglediff(line2)
+####                    if bwangle < 0:
+####                        rightcurve = _Bezier([line1_right.tolist()[1],outercurvecontrol,line2_right.tolist()[0]], intervals=int(round(resolution*buffersize*3))).coords
+####                        leftcurve = [midleft]
+####                    else:
+####                        rightcurve = [midright]
+####                        leftcurve = _Bezier([line1_left.tolist()[1],outercurvecontrol,line2_left.tolist()[0]], intervals=int(round(resolution*buffersize*3))).coords
 ##                    #
-##                    #NEW BEZIER APPROACH
-##                    midx,midy = x2,y2
-##                    oppositeangle = line1.anglebetween_outer(line2)
-##                    oppositeangle_rad = math.radians(oppositeangle)
-##                    outercurvecontrol = (midx-buffersize*math.cos(oppositeangle_rad),midy+buffersize*math.sin(oppositeangle_rad))
-##                    bwangle = line1.anglediff(line2)
-##                    if bwangle < 0:
-##                        leftcurve = _Bezier([line1_left.tolist()[1],outercurvecontrol,line2_left.tolist()[0]], intervals=int(round(resolution*buffersize*3))).coords
-##                        rightcurve = [midright]
-##                    else:
-##                        rightcurve = _Bezier([line1_right.tolist()[1],outercurvecontrol,line2_right.tolist()[0]], intervals=int(round(resolution*buffersize*3))).coords
-##                        leftcurve = [midleft]
-                    #
-                    #BEZIER approach
-                    leftcurve = _Bezier([line1_left.tolist()[1],midleft,line2_left.tolist()[0]], intervals=int(round(resolution*buffersize*3))).coords
-                    rightcurve = _Bezier([line1_right.tolist()[1],midright,line2_right.tolist()[0]], intervals=int(round(resolution*buffersize*3))).coords
-                    #add coords
-##                    linepolygon.append(linepolygon_left[-1])
-##                    linepolygon.extend(leftcurve)
-##                    linepolygon.extend(list(reversed(rightcurve)))
-##                    linepolygon.append(linepolygon_right[-1])
-                    linepolygon_left.extend(leftcurve)
-                    linepolygon_right.extend(rightcurve)
+##                    #BEZIER approach
+##                    leftcurve = _Bezier([line1_left.tolist()[1],midleft,line2_left.tolist()[0]], intervals=int(round(resolution*buffersize*3))).coords
+##                    rightcurve = _Bezier([line1_right.tolist()[1],midright,line2_right.tolist()[0]], intervals=int(round(resolution*buffersize*3))).coords
+##                    #add coords
+##                    linepolygon_left.extend(leftcurve)
+##                    linepolygon_right.extend(rightcurve)
 ##            elif jointype == "bevel":
 ##                #flattened
 ##                for start,mid,end in threewise(self.coords):
@@ -581,10 +665,8 @@ class LineString:
 ##                        print("WARNING, midpoint intersection not found")
 ##                        return
 ##                    #add coords
-##                    linepolygon.extend([linepolygon_left[-1],midleft])
-##                    linepolygon.extend([midright,linepolygon_right[-1]])
-##                    linepolygon_left.append(midleft)
-##                    linepolygon_right.append(midright)
+##                    linepolygon_left.extend([line1_left.tolist()[1],line2_left.tolist()[0]])
+##                    linepolygon_right.extend([line1_right.tolist()[1],line2_right.tolist()[0]])
                     
             #finally add last line coords
             (x1,y1),(x2,y2) = self.coords[-2:]
@@ -609,11 +691,17 @@ class LineString:
             geom = geom.union(geom)
         return geom
     ### Other
-    def view(self, imagesize=None, crs=None, fillcolor=(111,111,111), outlinecolor=(0,0,0)):
+    def view(self, imagesize=None, crs=None, tickunit="default", fillcolor=(111,111,111), outlinecolor=(0,0,0)):
         """
         Draws and pops up a window with the shape.
 
-        - imagesize is an optional two-tuple of the pixel size of the viewimage in the form of (pixelwidth,pixelheight). Default is 400 by 400.
+        | __options__ | __description__ 
+        | --- | --- 
+        | *imagesize | an optional two-tuple of the pixel size of the viewimage in the form of (pixelwidth,pixelheight). Default is 400 by 400.
+        | *crs | a CoordinateSystem() instance used to map the coordinate/zoom extent.
+        | *tickunit | How often (distance between each) to show a tick. Ticks are shown equally frequently on both the x and y axis to avoid shape distortion. Default is every 10 percent of the width of the coordinate system or image size.
+        | *fillcolor | A 3-tuple RGB color to fill the shape with. None leaves it hollow. 
+        | *outlinecolor | A 3-tuple RGB color to outline the shape with. None disables the outline. 
         """
         import pydraw
         if not imagesize: imagesize = (400,400)
@@ -621,23 +709,34 @@ class LineString:
             x1,y1,x2,y2 = self.bounds
             xwidth = x2-x1
             yheight = y2-y1
-            coordheightratio = yheight/float(xwidth)
-            screenheightratio = imagesize[1]/float(imagesize[0])
-            if coordheightratio < screenheightratio:
-                yheight = xwidth/float(coordheightratio)
-            elif coordheightratio > screenheightratio:
-                xwidth = yheight/float(screenheightratio)
+            if xwidth > yheight:
+                yheight = xwidth
+                y2 = y1+xwidth
+            elif yheight > xwidth:
+                xwidth = yheight
+                x2 = x1+yheight
             xoffset = xwidth*0.1
             yoffset = yheight*0.1
             crs_bounds = [x1-xoffset, y1-yoffset, x2+xoffset, y2+yoffset]
             crs = pydraw.CoordinateSystem(crs_bounds)
         img = pydraw.Image(*imagesize, background=(250,250,250), crs=crs)
+        if tickunit:
+            if tickunit == "default":
+                #default to show tick every 10 percent of xwidth on both x and y axis
+                tickunit = crs.xwidth/10.0
+            img.drawgridticks(every_x=tickunit, every_y=tickunit)
         img.drawgeojson(self, fillcolor=fillcolor, outlinecolor=outlinecolor)
         img.view()
 
 class MultiLineString:
     #NOT FINISHED, LACKING SET THEORY METHODS
     def __init__(self, lines):
+        """
+
+        | __options__ | __description__ 
+        | --- | ---
+        | lines | a list of line coordinate lists, one for each linestring. 
+        """
         self.geom_type = "MultiLineString"
         geoms = []
         for line in lines:
@@ -688,11 +787,17 @@ class MultiLineString:
             result = result.union(result)
         return result
     ### Other
-    def view(self, imagesize=None, crs=None, fillcolor=(111,111,111), outlinecolor=(0,0,0)):
+    def view(self, imagesize=None, crs=None, tickunit="default", fillcolor=(111,111,111), outlinecolor=(0,0,0)):
         """
         Draws and pops up a window with the shape.
 
-        - imagesize is an optional two-tuple of the pixel size of the viewimage in the form of (pixelwidth,pixelheight). Default is 400 by 400.
+        | __options__ | __description__ 
+        | --- | --- 
+        | *imagesize | an optional two-tuple of the pixel size of the viewimage in the form of (pixelwidth,pixelheight). Default is 400 by 400.
+        | *crs | a CoordinateSystem() instance used to map the coordinate/zoom extent.
+        | *tickunit | How often (distance between each) to show a tick. Ticks are shown equally frequently on both the x and y axis to avoid shape distortion. Default is every 10 percent of the width of the coordinate system or image size.
+        | *fillcolor | A 3-tuple RGB color to fill the shape with. None leaves it hollow. 
+        | *outlinecolor | A 3-tuple RGB color to outline the shape with. None disables the outline. 
         """
         import pydraw
         if not imagesize: imagesize = (400,400)
@@ -700,17 +805,22 @@ class MultiLineString:
             x1,y1,x2,y2 = self.bounds
             xwidth = x2-x1
             yheight = y2-y1
-            coordheightratio = yheight/float(xwidth)
-            screenheightratio = imagesize[1]/float(imagesize[0])
-            if coordheightratio < screenheightratio:
-                yheight = xwidth/float(coordheightratio)
-            elif coordheightratio > screenheightratio:
-                xwidth = yheight/float(screenheightratio)
+            if xwidth > yheight:
+                yheight = xwidth
+                y2 = y1+xwidth
+            elif yheight > xwidth:
+                xwidth = yheight
+                x2 = x1+yheight
             xoffset = xwidth*0.1
             yoffset = yheight*0.1
             crs_bounds = [x1-xoffset, y1-yoffset, x2+xoffset, y2+yoffset]
             crs = pydraw.CoordinateSystem(crs_bounds)
         img = pydraw.Image(*imagesize, background=(250,250,250), crs=crs)
+        if tickunit:
+            if tickunit == "default":
+                #default to show tick every 10 percent of xwidth on both x and y axis
+                tickunit = crs.xwidth/10.0
+            img.drawgridticks(every_x=tickunit, every_y=tickunit)
         img.drawgeojson(self, fillcolor=fillcolor, outlinecolor=outlinecolor)
         img.view()
         
@@ -770,8 +880,11 @@ class LinearRing:
 class Polygon:
     def __init__(self, exterior, interiors=[]):
         """
-        - exterior is a single list of the polygon's outer coordinates
-        - interiors is a list of several coordinate lists (one for each hole)
+
+        | __options__ | __description__ 
+        | --- | --- 
+        | exterior | a single list of the polygon's outer coordinates
+        | *interiors | an optional list of several hole coordinate lists (one for each hole)
         """
         self.geom_type = "Polygon"
         self.exterior = LinearRing(exterior)
@@ -859,11 +972,17 @@ class Polygon:
         result = _Clip(subjpolys, clippolys, "exclusive_or")
         return result
     ### Other
-    def view(self, imagesize=None, crs=None, fillcolor=(111,111,111), outlinecolor=(0,0,0)):
+    def view(self, imagesize=None, crs=None, tickunit="default", fillcolor=(111,111,111), outlinecolor=(0,0,0)):
         """
         Draws and pops up a window with the shape.
 
-        - imagesize is an optional two-tuple of the pixel size of the viewimage in the form of (pixelwidth,pixelheight). Default is 400 by 400.
+        | __options__ | __description__ 
+        | --- | --- 
+        | *imagesize | an optional two-tuple of the pixel size of the viewimage in the form of (pixelwidth,pixelheight). Default is 400 by 400.
+        | *crs | a CoordinateSystem() instance used to map the coordinate/zoom extent.
+        | *tickunit | How often (distance between each) to show a tick. Ticks are shown equally frequently on both the x and y axis to avoid shape distortion. Default is every 10 percent of the width of the coordinate system or image size.
+        | *fillcolor | A 3-tuple RGB color to fill the shape with. None leaves it hollow. 
+        | *outlinecolor | A 3-tuple RGB color to outline the shape with. None disables the outline. 
         """
         import pydraw
         if not imagesize: imagesize = (400,400)
@@ -871,17 +990,22 @@ class Polygon:
             x1,y1,x2,y2 = self.bounds
             xwidth = x2-x1
             yheight = y2-y1
-            coordheightratio = yheight/float(xwidth)
-            screenheightratio = imagesize[1]/float(imagesize[0])
-            if coordheightratio < screenheightratio:
-                yheight = xwidth/float(coordheightratio)
-            elif coordheightratio > screenheightratio:
-                xwidth = yheight/float(screenheightratio)
+            if xwidth > yheight:
+                yheight = xwidth
+                y2 = y1+xwidth
+            elif yheight > xwidth:
+                xwidth = yheight
+                x2 = x1+yheight
             xoffset = xwidth*0.1
             yoffset = yheight*0.1
             crs_bounds = [x1-xoffset, y1-yoffset, x2+xoffset, y2+yoffset]
             crs = pydraw.CoordinateSystem(crs_bounds)
         img = pydraw.Image(*imagesize, background=(250,250,250), crs=crs)
+        if tickunit:
+            if tickunit == "default":
+                #default to show tick every 10 percent of xwidth on both x and y axis
+                tickunit = crs.xwidth/10.0
+            img.drawgridticks(every_x=tickunit, every_y=tickunit)
         img.drawgeojson(self, fillcolor=fillcolor, outlinecolor=outlinecolor)
         img.view()
     ### Internal use only
@@ -894,7 +1018,10 @@ class Polygon:
 class MultiPolygon:
     def __init__(self, polygons):
         """
-        - polygons is a sequence of polygon type lists, each with one exterior list followed by a list of hole-lists
+
+        | __options__ | __description__ 
+        | --- | --- 
+        | polygons | a sequence of polygon type lists, each with one exterior list followed by one list of multiple hole-lists
           example: MultiPolygon([ (exterior1, [hole1_1,hole1_2]), (exterior2, [hole2_1,hole2_2]) ])
         """
         self.geom_type = "MultiPolygon"
@@ -906,6 +1033,9 @@ class MultiPolygon:
     ### Properties
     @property
     def __geo_interface__(self):
+        """
+        Returns the geojson dictionary representation of the geometry.
+        """
         geojson = dict()
         coords = []
         for geom in self.geoms:
@@ -920,18 +1050,27 @@ class MultiPolygon:
         return geojson
     @property
     def area(self):
+        """
+        Returns the area of the geometry.
+        """
         sumarea = 0
         for geom in self.geoms:
             sumarea += geom.area
         return sumarea
     @property
     def length(self):
+        """
+        Returns the length of the outline of the geometry.
+        """
         length = 0
         for geom in self.geoms:
             length += geom.length
         return length
     @property
     def bounds(self):
+        """
+        Returns the bounding box of the geometry, given as a four-list [xmin,ymin,xmax,ymax]
+        """
         xmin,ymin,xmax,ymax = self.geoms[0].exterior.bounds
         for geom in self.geoms:
             _xmin,_ymin,_xmax,_ymax = geom.exterior.bounds
@@ -942,6 +1081,16 @@ class MultiPolygon:
         return [xmin,ymin,xmax,ymax]
     ### Constructive methods
     def buffer(self, buffersize, jointype="miter", resolution=0.75, dissolve=True):
+        """
+        Buffers or offsets the geometry by the given buffersize, returning a new geometry.
+
+        | __options__ | __description__ 
+        | --- | --- 
+        | buffersize | the float or integer value to use for offsetting
+        | *jointype | either "miter" (default) for sharp extended edges, "round" for rounded ones, and "bevel" for cut-off edges. 
+        | *resolution | the degree of detail when using the "round" jointype, with 0 meaning very coarse and 1.0 meaning very detailed. Default is 0.75. 
+        | *dissolve | a boolean for whether to dissolve/merge any overlapping shapes resulting from the buffer operation. Default is True. 
+        """
         if len(self.geoms) > 1:
             newgeoms = (geom.buffer(buffersize, jointype=jointype, resolution=resolution) for geom in self.geoms)
             multipolycoords = [(eachmulti.exterior.coords,[hole.coords for hole in eachmulti.interiors]) for eachmulti in newgeoms]
@@ -952,31 +1101,56 @@ class MultiPolygon:
         return result
     ### Set theory methods
     def intersect(self, other):
+        """
+        Highlights those areas where geometries overlap eachother.
+
+        Note: Currently only works for Polygons and MultiPolygons.
+        """
         subjpolys = self
         clippolys = other
         result = _Clip(subjpolys, clippolys, "intersect")
         return result
     def union(self, other):
+        """
+        Combines all geometries into one big one. All shapes must be of the
+        same general type and cannot be crossed with eachother, so only Point
+        and MultiPoints, LinearString and MultiLinearStrings, or Polygon and
+        MultiPolygon. 
+        
+        Note: Currently only works for Polygons and MultiPolygons.
+        """
         subjpolys = self
         clippolys = other
         result = _Clip(subjpolys, clippolys, "union")
         return result
     def difference(self, other):
+        """
+        Shows how the calling geometry is different from another one.
+        """
         subjpolys = self
         clippolys = other
         result = _Clip(subjpolys, clippolys, "difference")
         return result
     def symmetric_difference(self, other):
+        """
+        Returns parts of two geometries that are unique to any of them. 
+        """
         subjpolys = self
         clippolys = other
         result = _Clip(subjpolys, clippolys, "exclusive_or")
         return result
     ### Other
-    def view(self, imagesize=None, crs=None, fillcolor=(111,111,111), outlinecolor=(0,0,0)):
+    def view(self, imagesize=None, crs=None, tickunit="default", fillcolor=(111,111,111), outlinecolor=(0,0,0)):
         """
         Draws and pops up a window with the shape.
 
-        - imagesize is an optional two-tuple of the pixel size of the viewimage in the form of (pixelwidth,pixelheight). Default is 400 by 400.
+        | __options__ | __description__ 
+        | --- | --- 
+        | *imagesize | an optional two-tuple of the pixel size of the viewimage in the form of (pixelwidth,pixelheight). Default is 400 by 400.
+        | *crs | a CoordinateSystem() instance used to map the coordinate/zoom extent.
+        | *tickunit | How often (distance between each) to show a tick. Ticks are shown equally frequently on both the x and y axis to avoid shape distortion. Default is every 10 percent of the width of the coordinate system or image size.
+        | *fillcolor | A 3-tuple RGB color to fill the shape with. None leaves it hollow. 
+        | *outlinecolor | A 3-tuple RGB color to outline the shape with. None disables the outline. 
         """
         import pydraw
         if not imagesize: imagesize = (400,400)
@@ -984,17 +1158,22 @@ class MultiPolygon:
             x1,y1,x2,y2 = self.bounds
             xwidth = x2-x1
             yheight = y2-y1
-            coordheightratio = yheight/float(xwidth)
-            screenheightratio = imagesize[1]/float(imagesize[0])
-            if coordheightratio < screenheightratio:
-                yheight = xwidth/float(coordheightratio)
-            elif coordheightratio > screenheightratio:
-                xwidth = yheight/float(screenheightratio)
+            if xwidth > yheight:
+                yheight = xwidth
+                y2 = y1+xwidth
+            elif yheight > xwidth:
+                xwidth = yheight
+                x2 = x1+yheight
             xoffset = xwidth*0.1
             yoffset = yheight*0.1
             crs_bounds = [x1-xoffset, y1-yoffset, x2+xoffset, y2+yoffset]
             crs = pydraw.CoordinateSystem(crs_bounds)
         img = pydraw.Image(*imagesize, background=(250,250,250), crs=crs)
+        if tickunit:
+            if tickunit == "default":
+                #default to show tick every 10 percent of xwidth on both x and y axis
+                tickunit = crs.xwidth/10.0
+            img.drawgridticks(every_x=tickunit, every_y=tickunit)
         img.drawgeojson(self, fillcolor=fillcolor, outlinecolor=outlinecolor)
         img.view()
     ### Internal use only

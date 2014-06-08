@@ -131,30 +131,30 @@ def buffertesting(VIEWGEOMS=False):
     print("#   BUFFER TESTING")
     print("#-------------------")
 
-##    #single point buffer test
-##    point = Point(33,33)
-##    if VIEWGEOMS:
-##        point.view()
-##    #
-##    result = point.buffer(500)
-##    if VIEWGEOMS:
-##        result.view()
-##
-##    #multipoint buffer test
-##    multipoint = MultiPoint([(33,33),(53,42),(99,99)])
-##    if VIEWGEOMS:
-##        multipoint.view()
-##    #
-##    result = multipoint.buffer(20, dissolve=True)
-##    if VIEWGEOMS:
-##        result.view()
+    #single point buffer test
+    point = Point(33,33)
+    if VIEWGEOMS:
+        point.view()
+    #
+    result = point.buffer(500)
+    if VIEWGEOMS:
+        result.view()
+
+    #multipoint buffer test
+    multipoint = MultiPoint([(33,33),(53,42),(99,99)])
+    if VIEWGEOMS:
+        multipoint.view()
+    #
+    result = multipoint.buffer(20, dissolve=True)
+    if VIEWGEOMS:
+        result.view()
 
     #line buffer test
     line = LineString([(1,33),(53,33),(35,99),(99,79),(1,33)])
     if VIEWGEOMS:
         line.view()
     #
-    result = line.buffer(10, jointype="miter", dissolve=True)
+    result = line.buffer(20, jointype="miter", dissolve=True)
     if VIEWGEOMS:
         result.view()
 

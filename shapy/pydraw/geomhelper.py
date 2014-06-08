@@ -162,19 +162,25 @@ class _Line:
         rightline = _Line(rightx1,righty1,rightx2,righty2)
         return leftline,rightline
     def anglediff(self, otherline):
-        "- is left turn, + is right turn"
+        """
+        not complete.
+        - is left turn, + is right turn
+        """
         angl1 = self.getangle()
         angl2 = otherline.getangle()
         bwangl_rel = angl1-angl2 # - is left turn, + is right turn
         #make into shortest turn direction
         if bwangl_rel < -180:
-            bwangl_rel = 360+bwangl_rel
+            bwangl_rel = bwangl_rel+360
         elif bwangl_rel > 180:
-            bwangl_rel = 360-bwangl_rel
+            bwangl_rel = bwangl_rel-360
         return bwangl_rel
     def anglebetween_inner(self, otherline):
         "not complete"
-        bwangl = (self.getangle()+otherline.getangle())/2.0
+        crossvecx = self.ydiff-otherline.ydiff
+        crossvecy = otherline.xdiff-self.xdiff
+        line = _Line(self.x2,self.y2,self.x2+crossvecx,self.y2+crossvecy)
+        bwangl = line.getangle()
         return bwangl
     def anglebetween_outer(self, otherline):
         "not complete"
@@ -574,8 +580,8 @@ if __name__ == "__main__":
     walkdest = pointdirection.walkdistance(dist)
     print "walkdist and destination",dist,walkdest
 
-    line1 = _Line(5,5,10,5)
-    line2 = _Line(5,5,7,7)
+    line1 = _Line(5,5,5.2,0)
+    line2 = _Line(5,5,5,7)
     diff = line1.anglediff(line2)
     inner = line1.anglebetween_inner(line2)
     outer = line1.anglebetween_outer(line2)
