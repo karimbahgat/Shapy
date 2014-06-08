@@ -131,22 +131,39 @@ def buffertesting(VIEWGEOMS=False):
     print("#   BUFFER TESTING")
     print("#-------------------")
 
-    #single point buffer test
-    point = Point(33,33)
-    result = point.buffer(500)
-    if VIEWGEOMS:
-        result.view()
-
-    #multibuffer test
-    multipoint = MultiPoint([(33,33),(53,42),(99,99)])
-    result = multipoint.buffer(3, dissolve=True)
-    if VIEWGEOMS:
-        result.view()
+##    #single point buffer test
+##    point = Point(33,33)
+##    if VIEWGEOMS:
+##        point.view()
+##    #
+##    result = point.buffer(500)
+##    if VIEWGEOMS:
+##        result.view()
+##
+##    #multipoint buffer test
+##    multipoint = MultiPoint([(33,33),(53,42),(99,99)])
+##    if VIEWGEOMS:
+##        multipoint.view()
+##    #
+##    result = multipoint.buffer(20, dissolve=True)
+##    if VIEWGEOMS:
+##        result.view()
 
     #line buffer test
-    line = LineString([(33,33),(53,42),(99,99),(82,44),(22,44),(43,82),(23,55)])
-    line.view()
-    result = line.buffer(22, jointype="miter")
+    line = LineString([(1,33),(53,33),(35,99),(99,79),(1,33)])
+    if VIEWGEOMS:
+        line.view()
+    #
+    result = line.buffer(10, jointype="miter", dissolve=True)
+    if VIEWGEOMS:
+        result.view()
+
+    #multiline buffer test
+    multiline = MultiLineString([[(1,33),(53,33),(35,99),(99,79),(1,33)],[(33,12),(85,64),(92,11)]])
+    if VIEWGEOMS:
+        multiline.view()
+    #
+    result = multiline.buffer(10, jointype="miter", dissolve=True)
     if VIEWGEOMS:
         result.view()
 
@@ -169,7 +186,7 @@ def buffertesting(VIEWGEOMS=False):
     if VIEWGEOMS:
         multipolygon.view()
     #
-    multipolygon_buffer = multipolygon.buffer(buffersize=9)
+    multipolygon_buffer = multipolygon.buffer(buffersize=9, dissolve=False)
     print("multibuffer %s"%multipolygon_buffer)
     if VIEWGEOMS:
         multipolygon_buffer.view()

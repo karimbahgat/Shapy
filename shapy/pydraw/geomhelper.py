@@ -116,6 +116,7 @@ class _Line:
     def getlength(self):
         return math.hypot(self.xdiff,self.ydiff)
     def getangle(self):
+        "hmm, sometimes returns negative angles instead of converting..."
         try:
             angle = math.degrees(math.atan(self.ydiff/float(self.xdiff)))
             if self.xdiff < 0:
@@ -126,10 +127,19 @@ class _Line:
             if self.ydiff < 0:
                 angle = 90
             elif self.ydiff > 0:
-                angle = -90
+                angle = 270
             else:
                 raise TypeError("error: the vector isnt moving anywhere, so has no angle")
+        if angle < 0:
+            angle = 360+angle
         return angle
+    def walkdistance(self, distance):
+        angl_rad = math.radians(self.getangle())
+        xbuff = distance * math.cos(angl_rad)
+        ybuff = distance * math.sin(angl_rad)
+        newx = self.x2-xbuff
+        newy = self.y2+ybuff
+        return (newx,newy)
     def getbuffersides(self, linebuffer):
         x1,y1,x2,y2 = self.x1,self.y1,self.x2,self.y2
         midline = _Line(x1,y1,x2,y2)
@@ -151,23 +161,28 @@ class _Line:
         leftline = _Line(leftx1,lefty1,leftx2,lefty2)
         rightline = _Line(rightx1,righty1,rightx2,righty2)
         return leftline,rightline
-    def anglebetween_rel(self, otherline):
+    def anglediff(self, otherline):
+        "- is left turn, + is right turn"
         angl1 = self.getangle()
         angl2 = otherline.getangle()
         bwangl_rel = angl1-angl2 # - is left turn, + is right turn
+        #make into shortest turn direction
+        if bwangl_rel < -180:
+            bwangl_rel = 360+bwangl_rel
+        elif bwangl_rel > 180:
+            bwangl_rel = 360-bwangl_rel
         return bwangl_rel
-    def anglebetween_abs(self, otherline):
-        bwangl_rel = self.anglebetween_rel(otherline)
-        angl1 = self.getangle()
-        bwangl = angl1+bwangl_rel
+    def anglebetween_inner(self, otherline):
+        "not complete"
+        bwangl = (self.getangle()+otherline.getangle())/2.0
         return bwangl
-    def anglebetween_inv(self, otherline):
-        bwangl = self.anglebetween_abs(otherline)
-        if bwangl < 0:
-            normangl = (180 + bwangl)/-2.0
+    def anglebetween_outer(self, otherline):
+        "not complete"
+        bwangl = self.anglebetween_inner(otherline)
+        if bwangl > 180:
+            normangl = bwangl-180
         else:
-            normangl = (180 - bwangl)/-2.0
-        normangl = (180 + bwangl)/-2.0
+            normangl = 180+bwangl
         return normangl
     
     #INTERNAL USE ONLY
@@ -547,7 +562,22 @@ def _Arc(x, y, radius, opening=None, facing=None, startangle=None, endangle=None
     return arccoords
 
 if __name__ == "__main__":
+    
+    import pydraw
+    
     line = _Line(10,10,1,2)
     point = _Point(5,10)
-    dist,point = line.distance2point(point, getpoint=True)
-    print dist,point.x,point.y
+    dist,closestpoint = line.distance2point(point, getpoint=True)
+    print "closestpoint2line",dist,closestpoint.x,closestpoint.y,point.x,point.y
+
+    pointdirection = _Line(closestpoint.x,closestpoint.y,point.x,point.y)
+    walkdest = pointdirection.walkdistance(dist)
+    print "walkdist and destination",dist,walkdest
+
+    line1 = _Line(5,5,10,5)
+    line2 = _Line(5,5,7,7)
+    diff = line1.anglediff(line2)
+    inner = line1.anglebetween_inner(line2)
+    outer = line1.anglebetween_outer(line2)
+    print "angles bw",line1.getangle(),line2.getangle(),diff,inner,outer
+    

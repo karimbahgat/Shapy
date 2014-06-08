@@ -289,11 +289,12 @@ class Point:
         geojson["coordinates"] = coords[0]
         return geojson
     ### Constructive methods
-    def buffer(self, buffersize, jointype="miter", resolution=0.75):
+    def buffer(self, buffersize, jointype="round", resolution=0.75):
         # for points use the _DoRound(pt, limit) function from inside _OffsetInternal
-        _point = _Point(self.x, self.y)
-        buffercoords = _point.getbuffer(buffersize, resolution=resolution)
-        geom = Polygon(exterior=buffercoords)
+        if jointype == "round":
+            _point = _Point(self.x, self.y)
+            buffercoords = _point.getbuffer(buffersize, resolution=resolution)
+            geom = Polygon(exterior=buffercoords)
         return geom
     ### Comparison methods
     def distance(self, other, getclosestpoints=False):
@@ -331,13 +332,13 @@ class Point:
         - imagesize is an optional two-tuple of the pixel size of the viewimage in the form of (pixelwidth,pixelheight). Default is 400 by 400.
         """
         import pydraw
+        if not imagesize: imagesize = (400,400)
         if not crs:
             x1,y1,x2,y2 = self.bounds
             xoffset = 5
             yoffset = 5
             crs_bounds = [x1-xoffset, y1-yoffset, x2+xoffset, y2+yoffset]
             crs = pydraw.CoordinateSystem(crs_bounds)
-        if not imagesize: imagesize = (400,400)
         img = pydraw.Image(*imagesize, background=(250,250,250), crs=crs)
         img.drawgeojson(self, fillcolor=fillcolor, outlinecolor=outlinecolor)
         img.view()
@@ -371,20 +372,15 @@ class MultiPoint:
             if _y > ymax: ymax = _y
         return [xmin,ymin,xmax,ymax]
     ### Constructive methods
-    def buffer(self, buffersize, jointype="miter", resolution=0.75, dissolve=True):
+    def buffer(self, buffersize, jointype="round", resolution=0.75, dissolve=True):
         # for points use the _DoRound(pt, limit) function from inside _OffsetInternal
-        result = self.geoms[0].buffer(buffersize, resolution=resolution)
-        newgeoms = []
         if len(self.geoms) > 1:
-            for geom in self.geoms:
-                buffergeom = geom.buffer(buffersize, resolution=resolution)
-                if dissolve:
-                    result = _Clip(result, buffergeom, "union")
-                else:
-                    newgeoms.append(buffergeom)
-            if not dissolve:
-                multipolycoords = [(eachmulti.exterior.coords,[]) for eachmulti in newgeoms]
-                result = MultiPolygon(multipolycoords)
+            newgeoms = (geom.buffer(buffersize, jointype=jointype, resolution=resolution) for geom in self.geoms)
+            multipolycoords = [(eachmulti.exterior.coords,[]) for eachmulti in newgeoms]
+            result = MultiPolygon(multipolycoords)
+        else: result = self.geoms[0].buffer(buffersize, resolution=resolution)
+        if dissolve:
+            result = result.union(result)
         return result
     ### Comparison methods
     def distance(self, other, getclosestpoints=False):
@@ -422,15 +418,21 @@ class MultiPoint:
         - imagesize is an optional two-tuple of the pixel size of the viewimage in the form of (pixelwidth,pixelheight). Default is 400 by 400.
         """
         import pydraw
+        if not imagesize: imagesize = (400,400)
         if not crs:
             x1,y1,x2,y2 = self.bounds
             xwidth = x2-x1
             yheight = y2-y1
+            coordheightratio = yheight/float(xwidth)
+            screenheightratio = imagesize[1]/float(imagesize[0])
+            if coordheightratio < screenheightratio:
+                yheight = xwidth/float(coordheightratio)
+            elif coordheightratio > screenheightratio:
+                xwidth = yheight/float(screenheightratio)
             xoffset = xwidth*0.1
             yoffset = yheight*0.1
             crs_bounds = [x1-xoffset, y1-yoffset, x2+xoffset, y2+yoffset]
             crs = pydraw.CoordinateSystem(crs_bounds)
-        if not imagesize: imagesize = (400,400)
         img = pydraw.Image(*imagesize, background=(250,250,250), crs=crs)
         img.drawgeojson(self, fillcolor=fillcolor, outlinecolor=outlinecolor)
         img.view()
@@ -474,7 +476,7 @@ class LineString:
             length += _linelength
         return length
     ### Constructive methods
-    def buffer(self, buffersize, jointype="miter", endtype="project", resolution=0.75):
+    def buffer(self, buffersize, jointype="miter", endtype="project", resolution=0.75, dissolve=True):
         """
         Warning: Still under construction, produces weird results.
         """
@@ -488,97 +490,123 @@ class LineString:
         linepolygon_left = []
         linepolygon_right = []
         buffersize = buffersize/2.0
-        #the first line
-        (x1,y1),(x2,y2),(x3,y3) = self.coords[:3]
-        line1 = _Line(x1,y1,x2,y2)
-        line2 = _Line(x2,y2,x3,y3)
-        leftline,rightline = line1.getbuffersides(linebuffer=buffersize)
-        leftlinestart = leftline.tolist()[0]
-        rightlinestart = rightline.tolist()[0]
-        linepolygon_left.append(leftlinestart)
-        linepolygon_right.append(rightlinestart)
+        if len(self.coords) > 2:
+            #the first line
+            (x1,y1),(x2,y2),(x3,y3) = self.coords[:3]
+            line1 = _Line(x1,y1,x2,y2)
+            line2 = _Line(x2,y2,x3,y3)
+            leftline,rightline = line1.getbuffersides(linebuffer=buffersize)
+            leftlinestart = leftline.tolist()[0]
+            rightlinestart = rightline.tolist()[0]
+            linepolygon_left.append(leftlinestart)
+            linepolygon_right.append(rightlinestart)
+            #then all mid areas
+            if jointype == "miter":
+                #sharp join style
+                for start,mid,end in threewise(self.coords):
+                    (x1,y1),(x2,y2),(x3,y3) = start,mid,end
+                    line1 = _Line(x1,y1,x2,y2)
+                    line2 = _Line(x2,y2,x3,y3)
+                    line1_left,line1_right = line1.getbuffersides(linebuffer=buffersize)
+                    line2_left,line2_right = line2.getbuffersides(linebuffer=buffersize)
+                    midleft = line1_left.intersect(line2_left, infinite=True)
+                    midright = line1_right.intersect(line2_right, infinite=True)
+                    if not midleft or not midright:
+                        #PROB FLOAT ERROR,SO NO INTERSECTION FOUND
+                        #CURRENTLY JUST SKIP DRAWING,BUT NEED BETTER HANDLING
+                        print("WARNING, midpoint intersection not found")
+                        return
+                    #add coords
+                    linepolygon_left.append(midleft)
+                    linepolygon_right.append(midright)
+            elif jointype == "round":
+                #round
+                #DOESNT WORK YET...
+                for start,mid,end in threewise(self.coords):
+                    (x1,y1),(x2,y2),(x3,y3) = start,mid,end
+                    line1 = _Line(x1,y1,x2,y2)
+                    line2 = _Line(x2,y2,x3,y3)
+                    line1_left,line1_right = line1.getbuffersides(linebuffer=buffersize)
+                    line2_left,line2_right = line2.getbuffersides(linebuffer=buffersize)
+                    midleft = line1_left.intersect(line2_left, infinite=True)
+                    midright = line1_right.intersect(line2_right, infinite=True)
+##                    if not midleft or not midright:
+##                        #PROB FLOAT ERROR,SO NO INTERSECTION FOUND
+##                        #CURRENTLY JUST SKIP DRAWING,BUT NEED BETTER HANDLING
+##                        print("WARNING, midpoint intersection not found")
+##                        return
+##                    #ARC approach
+##                    midx,midy = x2,y2
+##                    oppositeangle = line1.anglebetween_inv(line2)
+##                    #innerangle = oppositeangle-180
+##                    #leftcurve = _Arc(midx,midy,radius=buffersize,facing=oppositeangle,opening=bwangle)
+##                    #rightcurve = [midright] #how do inner arc?
+##                    #
+##                    #NEW BEZIER APPROACH
+##                    midx,midy = x2,y2
+##                    oppositeangle = line1.anglebetween_outer(line2)
+##                    oppositeangle_rad = math.radians(oppositeangle)
+##                    outercurvecontrol = (midx-buffersize*math.cos(oppositeangle_rad),midy+buffersize*math.sin(oppositeangle_rad))
+##                    bwangle = line1.anglediff(line2)
+##                    if bwangle < 0:
+##                        leftcurve = _Bezier([line1_left.tolist()[1],outercurvecontrol,line2_left.tolist()[0]], intervals=int(round(resolution*buffersize*3))).coords
+##                        rightcurve = [midright]
+##                    else:
+##                        rightcurve = _Bezier([line1_right.tolist()[1],outercurvecontrol,line2_right.tolist()[0]], intervals=int(round(resolution*buffersize*3))).coords
+##                        leftcurve = [midleft]
+                    #
+                    #BEZIER approach
+                    leftcurve = _Bezier([line1_left.tolist()[1],midleft,line2_left.tolist()[0]], intervals=int(round(resolution*buffersize*3))).coords
+                    rightcurve = _Bezier([line1_right.tolist()[1],midright,line2_right.tolist()[0]], intervals=int(round(resolution*buffersize*3))).coords
+                    #add coords
+##                    linepolygon.append(linepolygon_left[-1])
+##                    linepolygon.extend(leftcurve)
+##                    linepolygon.extend(list(reversed(rightcurve)))
+##                    linepolygon.append(linepolygon_right[-1])
+                    linepolygon_left.extend(leftcurve)
+                    linepolygon_right.extend(rightcurve)
+##            elif jointype == "bevel":
+##                #flattened
+##                for start,mid,end in threewise(self.coords):
+##                    (x1,y1),(x2,y2),(x3,y3) = start,mid,end
+##                    line1 = _Line(x1,y1,x2,y2)
+##                    line2 = _Line(x2,y2,x3,y3)
+##                    line1_left,line1_right = line1.getbuffersides(linebuffer=buffersize)
+##                    line2_left,line2_right = line2.getbuffersides(linebuffer=buffersize)
+##                    midleft = line1_left.tolist()[1]
+##                    midright = line1_right.tolist()[1]
+##                    if not midleft or not midright:
+##                        #PROB FLOAT ERROR,SO NO INTERSECTION FOUND
+##                        #CURRENTLY JUST SKIP DRAWING,BUT NEED BETTER HANDLING
+##                        print("WARNING, midpoint intersection not found")
+##                        return
+##                    #add coords
+##                    linepolygon.extend([linepolygon_left[-1],midleft])
+##                    linepolygon.extend([midright,linepolygon_right[-1]])
+##                    linepolygon_left.append(midleft)
+##                    linepolygon_right.append(midright)
+                    
+            #finally add last line coords
+            (x1,y1),(x2,y2) = self.coords[-2:]
+            lastline = _Line(x1,y1,x2,y2)
+            leftline,rightline = lastline.getbuffersides(linebuffer=buffersize)
+            leftlinestop = leftline.tolist()[1]
+            rightlinestop = rightline.tolist()[1]
+            linepolygon_left.append(leftlinestop)
+            linepolygon_right.append(rightlinestop)
+        else:
+            #only a single line segment, so no joins necessary
+            (x1,y1),(x2,y2) = self.coords[:2]
+            line1 = _Line(x1,y1,x2,y2)
+            leftline,rightline = line1.getbuffersides(linebuffer=buffersize)
+            linepolygon_left = leftline.tolist()
+            linepolygon_right = rightline.tolist()
         linepolygon = []
-        #then all mid areas
-        if jointype == "miter":
-            #sharp join style
-            for start,mid,end in threewise(self.coords):
-                (x1,y1),(x2,y2),(x3,y3) = start,mid,end
-                line1 = _Line(x1,y1,x2,y2)
-                line2 = _Line(x2,y2,x3,y3)
-                line1_left,line1_right = line1.getbuffersides(linebuffer=buffersize)
-                line2_left,line2_right = line2.getbuffersides(linebuffer=buffersize)
-                midleft = line1_left.intersect(line2_left, infinite=True)
-                midright = line1_right.intersect(line2_right, infinite=True)
-                if not midleft or not midright:
-                    #PROB FLOAT ERROR,SO NO INTERSECTION FOUND
-                    #CURRENTLY JUST SKIP DRAWING,BUT NEED BETTER HANDLING
-                    print("WARNING, midpoint intersection not found")
-                    return
-                #add coords
-                linepolygon.extend([linepolygon_left[-1],midleft])
-                linepolygon.extend([midright,linepolygon_right[-1]])
-                linepolygon_left.append(midleft)
-                linepolygon_right.append(midright)
-        elif jointype == "round":
-            #round
-            for start,mid,end in threewise(self.coords):
-                (x1,y1),(x2,y2),(x3,y3) = start,mid,end
-                line1 = _Line(x1,y1,x2,y2)
-                line2 = _Line(x2,y2,x3,y3)
-                line1_left,line1_right = line1.getbuffersides(linebuffer=buffersize)
-                line2_left,line2_right = line2.getbuffersides(linebuffer=buffersize)
-                midleft = line1_left.intersect(line2_left, infinite=True)
-                midright = line1_right.intersect(line2_right, infinite=True)
-                if not midleft or not midright:
-                    #PROB FLOAT ERROR,SO NO INTERSECTION FOUND
-                    #CURRENTLY JUST SKIP DRAWING,BUT NEED BETTER HANDLING
-                    print("WARNING, midpoint intersection not found")
-                    return
-                #ARC approach
-                ##midx,midy = x2,y2
-                ##oppositeangle = line1.anglebetween_inv(line2)
-                ##bwangle = line1.anglebetween_abs(line2)
-                ##leftangl,rightangl = oppositeangle-bwangle,oppositeangle+bwangle
-                ##leftcurve = _Arc(midx,midy,radius=buffersize,startangle=leftangl,endangle=rightangl)
-                ##rightcurve = _Arc(midx-buffersize,midy-buffersize,radius=buffersize,startangle=leftangl,endangle=rightangl) #[(midx,midy)] #how do inner arc?
-                leftcurve = _Bezier([line1_left.tolist()[1],midleft,line2_left.tolist()[0]], intervals=int(round(resolution*buffersize*3))).coords
-                rightcurve = _Bezier([line1_right.tolist()[1],midright,line2_right.tolist()[0]], intervals=int(round(resolution*buffersize*3))).coords
-                #add coords
-                linepolygon.append(linepolygon_left[-1])
-                linepolygon.extend(leftcurve)
-                linepolygon.extend(list(reversed(rightcurve)))
-                linepolygon.append(linepolygon_right[-1])
-                linepolygon_left.extend(leftcurve)
-                linepolygon_right.extend(rightcurve)
-        elif jointype == "bevel":
-            #flattened
-            for start,mid,end in threewise(self.coords):
-                (x1,y1),(x2,y2),(x3,y3) = start,mid,end
-                line1 = _Line(x1,y1,x2,y2)
-                line2 = _Line(x2,y2,x3,y3)
-                line1_left,line1_right = line1.getbuffersides(linebuffer=buffersize)
-                line2_left,line2_right = line2.getbuffersides(linebuffer=buffersize)
-                midleft = line1_left.tolist()[1]
-                midright = line1_right.tolist()[1]
-                if not midleft or not midright:
-                    #PROB FLOAT ERROR,SO NO INTERSECTION FOUND
-                    #CURRENTLY JUST SKIP DRAWING,BUT NEED BETTER HANDLING
-                    print("WARNING, midpoint intersection not found")
-                    return
-                #add coords
-                linepolygon.extend([linepolygon_left[-1],midleft])
-                linepolygon.extend([midright,linepolygon_right[-1]])
-                linepolygon_left.append(midleft)
-                linepolygon_right.append(midright)
-        #finally add last line coords
-        (x1,y1),(x2,y2) = self.coords[-2:]
-        lastline = _Line(x1,y1,x2,y2)
-        leftline,rightline = lastline.getbuffersides(linebuffer=buffersize)
-        leftlinestart = leftline.tolist()[1]
-        rightlinestart = rightline.tolist()[1]
-        linepolygon.extend([linepolygon_left[-1],leftlinestart])
-        linepolygon.extend([rightlinestart,linepolygon_right[-1]])
+        linepolygon.extend(linepolygon_left)
+        linepolygon.extend(list(reversed(linepolygon_right)))
         geom = Polygon(exterior=linepolygon)
+        if dissolve:
+            geom = geom.union(geom)
         return geom
     ### Other
     def view(self, imagesize=None, crs=None, fillcolor=(111,111,111), outlinecolor=(0,0,0)):
@@ -588,15 +616,21 @@ class LineString:
         - imagesize is an optional two-tuple of the pixel size of the viewimage in the form of (pixelwidth,pixelheight). Default is 400 by 400.
         """
         import pydraw
+        if not imagesize: imagesize = (400,400)
         if not crs:
             x1,y1,x2,y2 = self.bounds
             xwidth = x2-x1
             yheight = y2-y1
+            coordheightratio = yheight/float(xwidth)
+            screenheightratio = imagesize[1]/float(imagesize[0])
+            if coordheightratio < screenheightratio:
+                yheight = xwidth/float(coordheightratio)
+            elif coordheightratio > screenheightratio:
+                xwidth = yheight/float(screenheightratio)
             xoffset = xwidth*0.1
             yoffset = yheight*0.1
             crs_bounds = [x1-xoffset, y1-yoffset, x2+xoffset, y2+yoffset]
             crs = pydraw.CoordinateSystem(crs_bounds)
-        if not imagesize: imagesize = (400,400)
         img = pydraw.Image(*imagesize, background=(250,250,250), crs=crs)
         img.drawgeojson(self, fillcolor=fillcolor, outlinecolor=outlinecolor)
         img.view()
@@ -645,18 +679,13 @@ class MultiLineString:
         return [xmin,ymin,xmax,ymax]
     ### Constructive methods
     def buffer(self, buffersize, jointype="miter", endtype="project", resolution=0.75, dissolve=True):
-        result = self.geoms[0].buffer(buffersize, resolution=resolution)
-        newgeoms = []
         if len(self.geoms) > 1:
-            for geom in self.geoms:
-                buffergeom = geom.buffer(buffersize, resolution=resolution)
-                if dissolve:
-                    result = _Clip(result, buffergeom, "union")
-                else:
-                    newgeoms.append(buffergeom)
-            if not dissolve:
-                multipolycoords = [(eachmulti.exterior.coords,[]) for eachmulti in newgeoms]
-                result = MultiPolygon(multipolycoords)
+            newgeoms = (geom.buffer(buffersize, jointype=jointype, resolution=resolution, dissolve=dissolve) for geom in self.geoms)
+            multipolycoords = [(eachmulti.exterior.coords,[hole.coords for hole in eachmulti.interiors]) for eachmulti in newgeoms]
+            result = MultiPolygon(multipolycoords)
+        else: result = self.geoms[0].buffer(buffersize, jointype=jointype, resolution=resolution, dissolve=dissolve)
+        if dissolve:
+            result = result.union(result)
         return result
     ### Other
     def view(self, imagesize=None, crs=None, fillcolor=(111,111,111), outlinecolor=(0,0,0)):
@@ -666,15 +695,21 @@ class MultiLineString:
         - imagesize is an optional two-tuple of the pixel size of the viewimage in the form of (pixelwidth,pixelheight). Default is 400 by 400.
         """
         import pydraw
+        if not imagesize: imagesize = (400,400)
         if not crs:
             x1,y1,x2,y2 = self.bounds
             xwidth = x2-x1
             yheight = y2-y1
+            coordheightratio = yheight/float(xwidth)
+            screenheightratio = imagesize[1]/float(imagesize[0])
+            if coordheightratio < screenheightratio:
+                yheight = xwidth/float(coordheightratio)
+            elif coordheightratio > screenheightratio:
+                xwidth = yheight/float(screenheightratio)
             xoffset = xwidth*0.1
             yoffset = yheight*0.1
             crs_bounds = [x1-xoffset, y1-yoffset, x2+xoffset, y2+yoffset]
             crs = pydraw.CoordinateSystem(crs_bounds)
-        if not imagesize: imagesize = (400,400)
         img = pydraw.Image(*imagesize, background=(250,250,250), crs=crs)
         img.drawgeojson(self, fillcolor=fillcolor, outlinecolor=outlinecolor)
         img.view()
@@ -783,7 +818,7 @@ class Polygon:
         #same as contains, but reverse the two polygons
         pass
     ### Constructive methods
-    def buffer(self, buffersize, jointype="miter"):
+    def buffer(self, buffersize, jointype="miter", resolution=0.75):
         jointypes = dict([("bevel",clipper.JoinType.Square),
                           ("round",clipper.JoinType.Round),
                           ("miter",clipper.JoinType.Miter)])
@@ -831,15 +866,21 @@ class Polygon:
         - imagesize is an optional two-tuple of the pixel size of the viewimage in the form of (pixelwidth,pixelheight). Default is 400 by 400.
         """
         import pydraw
+        if not imagesize: imagesize = (400,400)
         if not crs:
             x1,y1,x2,y2 = self.bounds
             xwidth = x2-x1
             yheight = y2-y1
+            coordheightratio = yheight/float(xwidth)
+            screenheightratio = imagesize[1]/float(imagesize[0])
+            if coordheightratio < screenheightratio:
+                yheight = xwidth/float(coordheightratio)
+            elif coordheightratio > screenheightratio:
+                xwidth = yheight/float(screenheightratio)
             xoffset = xwidth*0.1
             yoffset = yheight*0.1
             crs_bounds = [x1-xoffset, y1-yoffset, x2+xoffset, y2+yoffset]
             crs = pydraw.CoordinateSystem(crs_bounds)
-        if not imagesize: imagesize = (400,400)
         img = pydraw.Image(*imagesize, background=(250,250,250), crs=crs)
         img.drawgeojson(self, fillcolor=fillcolor, outlinecolor=outlinecolor)
         img.view()
@@ -900,25 +941,15 @@ class MultiPolygon:
             if _ymax > ymax: ymax = _ymax
         return [xmin,ymin,xmax,ymax]
     ### Constructive methods
-    def buffer(self, buffersize, jointype="miter"):
-        jointypes = dict([("bevel",clipper.JoinType.Square),
-                          ("round",clipper.JoinType.Round),
-                          ("miter",clipper.JoinType.Miter)])
-        jointype = jointypes[jointype]
-        #Note: buffer on multipolygon automatically dissolves if it ends up intersecting itself
-        allpolys = []
-        for geom in self.geoms:
-            #prep coords
-            temppolys = [_PrepCoords(geom.exterior.coords, convertfloats=False)]
-            _holes = [_PrepCoords(hole.coords, convertfloats=False) for hole in geom.interiors]
-            if _holes:
-                temppolys.extend(_holes)
-            allpolys.extend(temppolys)
-        #execute buffer
-        resulttree = clipper.OffsetPolygons(allpolys, buffersize, jointype=jointype)
-        #finally create and return geom
-        geom = _ResultTree2Geom(resulttree)
-        return geom
+    def buffer(self, buffersize, jointype="miter", resolution=0.75, dissolve=True):
+        if len(self.geoms) > 1:
+            newgeoms = (geom.buffer(buffersize, jointype=jointype, resolution=resolution) for geom in self.geoms)
+            multipolycoords = [(eachmulti.exterior.coords,[hole.coords for hole in eachmulti.interiors]) for eachmulti in newgeoms]
+            result = MultiPolygon(multipolycoords)
+        else: result = self.geoms[0].buffer(buffersize, jointype=jointype, resolution=resolution)
+        if dissolve:
+            result = result.union(result)
+        return result
     ### Set theory methods
     def intersect(self, other):
         subjpolys = self
@@ -948,15 +979,21 @@ class MultiPolygon:
         - imagesize is an optional two-tuple of the pixel size of the viewimage in the form of (pixelwidth,pixelheight). Default is 400 by 400.
         """
         import pydraw
+        if not imagesize: imagesize = (400,400)
         if not crs:
             x1,y1,x2,y2 = self.bounds
             xwidth = x2-x1
             yheight = y2-y1
+            coordheightratio = yheight/float(xwidth)
+            screenheightratio = imagesize[1]/float(imagesize[0])
+            if coordheightratio < screenheightratio:
+                yheight = xwidth/float(coordheightratio)
+            elif coordheightratio > screenheightratio:
+                xwidth = yheight/float(screenheightratio)
             xoffset = xwidth*0.1
             yoffset = yheight*0.1
             crs_bounds = [x1-xoffset, y1-yoffset, x2+xoffset, y2+yoffset]
             crs = pydraw.CoordinateSystem(crs_bounds)
-        if not imagesize: imagesize = (400,400)
         img = pydraw.Image(*imagesize, background=(250,250,250), crs=crs)
         img.drawgeojson(self, fillcolor=fillcolor, outlinecolor=outlinecolor)
         img.view()
