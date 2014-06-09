@@ -240,16 +240,32 @@ def dist_lines2multipoint(lines, multipoint, getclosestpoints=False, relativedis
     return result
 
 def dist_lines2lines(lines1, lines2, getclosestpoints=False, relativedist=False):
-    #see eg http://mathforum.org/library/drmath/view/51980.html
-    # or http://mathforum.org/library/drmath/view/51926.html
-    # or https://answers.yahoo.com/question/index?qid=20110507163534AAgvfQF
-    pass
+    _firstlineseg1 = lines1[:2]
+    _firstlineseg2 = lines2[:2]
+    #first the first one
+    minresult = _line2line(_firstlineseg1, _firstlineseg2, getclosestpoints=getclosestpoints, relativedist=True)
+    mindist = minresult["mindist"]
+    #then the rest
+    for _lineseg1 in _pairwise(lines1):
+        for _lineseg2 in _pairwise(lines2):
+            if mindist == 0: break #point is on line, so stop checking and return result
+            else:
+                _result = _line2line(_lineseg1, _lineseg2, getclosestpoints=getclosestpoints, relativedist=True)
+                _dist = _result["mindist"]
+                if _dist < mindist:
+                    minresult = _result
+                    mindist = _dist
+    #prepare results
+    if not relativedist:
+        mindist = math.sqrt(mindist)
+        minresult["mindist"] = mindist
+    return minresult
 
 def dist_lines2multilines(lines, multilines, getclosestpoints=False, relativedist=False):
     pass
 
 def dist_lines2poly(lines, poly, getclosestpoints=False, relativedist=False):
-    #loop polyedges and use line2line func
+    #loop polyedges and use lines2lines func
     pass
 
 def dist_lines2multipoly(lines, multipoly, getclosestpoints=False, relativedist=False):
@@ -392,5 +408,74 @@ def _line2point(line, point, getclosestpoint=False, relativedist=False):
     if getclosestpoint: result = (dist,(x,y))
     else: result = dist
     return result
-def _line2line(line1, line2, getclosestpoint=False, relativedist=False):
-    pass
+def _line2line(line1, line2, getclosestpoints=False, relativedist=False):
+    """
+    Returns a dictionary of info...
+    
+    Note: Will not test if lines intersect, this has to be checked prior.
+    BUT maybe should add afterall...
+
+    Based on: http://stackoverflow.com/questions/2824478/shortest-distance-between-two-line-segments
+    """
+    L1start,L1stop = line1
+    L2start,L2stop = line2
+    # try each of the 4 vertices w/the other segment
+    pointlinecombis = [ (L1start, [L2start,L2stop]),
+                        (L1stop, [L2start,L2stop]),
+                        (L2start, [L1start,L1stop]),
+                        (L2stop, [L1start,L1stop]) ]
+    #first one
+    _point,_line = pointlinecombis[0]
+    minresult = dist_point2lines(_point, _line, getclosestpoint=getclosestpoints, relativedist=True)
+    mindist = minresult["mindist"]
+    closestpoint_self = _point
+    #then the rest
+    for point,line in pointlinecombis[1:]:
+        _result = dist_point2lines(point, line, getclosestpoint=getclosestpoints, relativedist=True)
+        _dist = _result["mindist"]
+        if _dist < mindist:
+            minresult = _result
+            mindist = _dist
+            closestpoint_self = point
+    #prepare results
+    if not relativedist:
+        mindist = math.sqrt(mindist)
+        minresult["mindist"] = mindist
+    if getclosestpoints: minresult["closestpoint_self"] = closestpoint_self
+    return minresult
+
+    #OLD BELOW
+##    #see eg http://mathforum.org/library/drmath/view/51980.html
+##    # or http://mathforum.org/library/drmath/view/51926.html
+##    # or https://answers.yahoo.com/question/index?qid=20110507163534AAgvfQF
+##    #step1: cross prod the two lines to find common perp vector
+##    (L1x1,L1y1),(L1x2,L1y2) = line1
+##    (L2x1,L2y1),(L2x2,L2y2) = line2
+##    L1dx,L1dy = L1x2-L1x1,L1y2-L1y1
+##    L2dx,L2dy = L2x2-L2x1,L2y2-L2y1
+##    commonperp_dx,commonperp_dy = (L1dy - L2dy, L2dx-L1dx)
+##    #step2: normalized_perp = perp vector / distance of common perp
+##    if relativedist:
+##        commonperp_length = commonperp_dx*commonperp_dx + commonperp_dy*commonperp_dy
+##    else: commonperp_length = math.hypot(commonperp_dx,commonperp_dy)
+##    commonperp_normalized_dx = commonperp_dx/float(commonperp_length)
+##    commonperp_normalized_dy = commonperp_dy/float(commonperp_length)
+##    #step3: length of (pointonline1-pointonline2 dotprod normalized_perp).
+##    shortestvector_dx = (L1x1-L2x1)*commonperp_normalized_dx
+##    shortestvector_dy = (L1y1-L2y1)*commonperp_normalized_dy
+##    if relativedist:
+##        mindist = shortestvector_dx*shortestvector_dx + shortestvector_dy*shortestvector_dy
+##    else: mindist = math.hypot(shortestvector_dx,shortestvector_dy)
+##    #return results
+##    if getclosestpoints: pass
+##    else: result = mindist
+##    return result
+
+if __name__ == "__main__":
+    l1 = [(1,7),(5,10),(7,9)]
+    l2 = [(0,0),(4,3),(10,10)]
+    print dist_lines2lines(l1, l2, getclosestpoints=True)
+    #print _line2line(l1,l2, getclosestpoints=True)
+    import shapy
+    ml = shapy.MultiLineString([l1,l2])
+    ml.view(tickunit=1)
