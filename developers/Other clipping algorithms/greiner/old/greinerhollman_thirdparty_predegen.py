@@ -349,19 +349,54 @@ class Polygon(object):
                 c.entry = c_entry
                 c_entry = not c_entry
 
-        # phase two - ALTERNATIVE
-        #first traverse both and set in/out/on flags, maybe using raycasting function
-        #all entry flags initially set to True
-        #then cycle subject and compare curr with prev and next before setting entry flag
-        #...
+        # phase two - DEGEN SUPPORT ALTERNATIVE
+        #(prereq, during intersection phase mark .on flag as True if alphas are 0 or 1)
+        #then mark entry/exit as usual, but if .on flag then check prev and next and neighbour location first
+##        def testLocation():
+##            #do the winding nr inside/outside/on algorithm from holman article, referenced in greiner algo
+##            pass
+##        def labelEntryExit(s)
+##            # degenerate point, ie subject line starts or ends on clipline
+##            if s.prev.on:
+##                if s.next.on:
+##                    # on -> on -> on, ie lines run along each other
+##                    pass
+##                elif s.next.testLocation == "in":
+##                    # on -> on -> inside
+##                    pass
+##                elif s.next.testLocation == "out":
+##                    # on -> on -> outside
+##                    pass
+##            elif s.prev.testLocation == "in":
+##                if s.next.on:
+##                    pass
+##                elif s.next.testLocation == "in":
+##                    pass
+##                elif s.next.testLocation == "out":
+##                    # in -> on -> out #normal toggle?
+##                    pass
+##            elif s.prev.testLocation == "out":
+##                if s.next.on:
+##                    pass
+##                elif s.next.testLocation == "in":
+##                    # out -> on -> in #normal toggle?
+##                    pass
+##                elif s.next.testLocation == "out":
+##                    pass
+##        s_entry ^= self.first.isInside(clip)
 ##        for s in self.iter():
 ##            if s.intersect:
-##                s.location = s.testLocation(clip)
-##                print s.location
-##
-##        for c in clip.iter():
-##            if c.intersect:
-##                c.location = c.testLocation(self)
+##                if s.on:
+##                    #intersection is degenerate, is the start/endpoint of a line
+##                    #so label entry/exit based on prev/next locations
+##                    labelEntryExit(s)
+##                    # finally do all the same for neighbour
+##                    labelEntryExit(s.neighbour)
+##                    pass
+##                else:
+##                    #pure inside or outside, so use normal entry toggle
+##                    s.entry = s_entry
+##                    s_entry = not s_entry
 
         # phase three - construct a list of clipped polygons
         resultpolys = []

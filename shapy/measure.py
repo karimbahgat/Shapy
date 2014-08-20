@@ -262,11 +262,48 @@ def dist_lines2lines(lines1, lines2, getclosestpoints=False, relativedist=False)
     return minresult
 
 def dist_lines2multilines(lines, multilines, getclosestpoints=False, relativedist=False):
-    pass
+    _firstmultiline = multilines[0]
+    #first the first one
+    minresult = dist_lines2lines(lines, _firstmultiline, getclosestpoints=getclosestpoints, relativedist=True)
+    mindist = minresult["mindist"]
+    #then the rest
+    for _multiline in multilines:
+        if mindist == 0: break #lines intersect, so stop checking and return result
+        else:
+            _result = dist_lines2lines(lines, _multiline, getclosestpoints=getclosestpoints, relativedist=True)
+            _dist = _result["mindist"]
+            if _dist < mindist:
+                minresult = _result
+                mindist = _dist
+    #prepare results
+    if not relativedist:
+        mindist = math.sqrt(mindist)
+        minresult["mindist"] = mindist
+    return minresult
 
 def dist_lines2poly(lines, poly, getclosestpoints=False, relativedist=False):
-    #loop polyedges and use lines2lines func
-    pass
+    exterior = poly[0]
+    if len(poly) > 1: holes = poly[1:]
+    else: holes = []
+##    #before anything check that point is not on polygon
+##    if PointInPoly(point, exterior, holes):
+##        #point was inside exterior and not in any hole, so must be on polygon
+##        minresult = {"mindist":0}
+##        return minresult
+##    #first measure distance from exterior
+##    minresult = dist_point2lines(point=point, lines=exterior, getclosestpoint=getclosestpoint, relativedist=True)
+##    mindist = minresult["mindist"]
+##    #then from holes
+##    for hole in holes:
+##        _result = dist_point2lines(point=point, lines=hole, getclosestpoint=getclosestpoint, relativedist=True)
+##        _dist = _result["mindist"]
+##        if _dist < mindist:
+##            mindist = _dist
+##            minresult = _result
+##    if not relativedist:
+##        mindist = math.sqrt(mindist)
+##        minresult["mindist"] = mindist
+##    return minresult
 
 def dist_lines2multipoly(lines, multipoly, getclosestpoints=False, relativedist=False):
     pass

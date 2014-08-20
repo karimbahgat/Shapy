@@ -690,6 +690,41 @@ class LineString:
         if dissolve:
             geom = geom.union(geom)
         return geom
+    ### Comparison methods
+    def distance(self, other, getclosestpoints=False):
+        """
+        Measures the distance from the main to the other geometry. Returns a
+        dictionary with several pieces of information, depending on the
+        "getclosestpoints" option. The minimum distance is accessed with the
+        keyword "mindist". 
+
+        | __options__ | __description__ 
+        | --- | --- 
+        | *getclosestpoints | an optional boolean for whether to also return the points on each geometry that are closest to eachother. These are accessed from the result-dictionary with the keywords "closestpoint_self" and "closestpoint_other". Default is False. 
+        """
+        othertype = other.geom_type
+        #begin measuring
+        if othertype == "Point":
+            minresult = measure.dist_lines2point(self.coords, other.coords[0], getclosestpoint=getclosestpoints)
+        elif othertype == "MultiPoint":
+            multilist = [geom.coords[0] for geom in other.geoms]
+            minresult = measure.dist_lines2multipoint(self.coords, multilist, getclosestpoints=getclosestpoints)
+        elif othertype == "LineString":
+            minresult = measure.dist_lines2lines(self.coords, other.coords, getclosestpoints=getclosestpoints)
+        elif othertype == "MultiLineString":
+            multilist = [geom.coords[0] for geom in other.geoms]
+            minresult = measure.dist_lines2multilines(self.coords, multilist, getclosestpoints=getclosestpoints)
+        elif othertype == "Polygon":
+            polyandholes = [ other.exterior.coords ]
+            if other.interiors: polyandholes.extend([hole.coords for hole in other.interiors])
+            minresult = measure.dist_lines2poly(self.coords, polyandholes, getclosestpoints=getclosestpoints)
+        elif othertype == "MultiPolygon":
+            allpolys = []
+            for geom in other.geoms:
+                polyandholes = [ geom.exterior.coords ]
+                if geom.interiors: polyandholes.extend([hole.coords for hole in geom.interiors])
+                allpolys.append(polyandholes)
+            minresult = measure.dist_lines2multipoly(self.coords, allpolys, getclosestpoints=getclosestpoints)
     ### Other
     def view(self, imagesize=None, crs=None, tickunit="default", fillcolor=(111,111,111), outlinecolor=(0,0,0)):
         """
