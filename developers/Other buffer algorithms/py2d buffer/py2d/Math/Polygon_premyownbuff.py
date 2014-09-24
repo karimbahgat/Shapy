@@ -361,13 +361,8 @@ class Polygon(object):
 
 		if amount == 0: return polys
 
-##        	# ensure that the polygon is counterclockwise
-##		# not needed anymore...
-##		newpolys = []
-##		for poly in polys:
-##                        if poly.is_clockwise(): poly = poly.clone().flip()
-##                        newpolys.append(poly)
-##                polys = newpolys
+##		# ensure that the polygon is counterclockwise
+##		if self.is_clockwise: self.flip
 
 		def offset_poly(poly):
 			r = []
@@ -499,50 +494,36 @@ class Polygon(object):
 
 		def find_point_in_poly(pts):
 			# find point inside of pts according to http://www.exaflop.org/docs/cgafaq/cga2.html#Subject%202.06:%20How%20do%20I%20find%20a%20single%20point%20inside%20a%20simple%20polygonu
-			# alternative approaches at http://stackoverflow.com/questions/9797448/get-a-point-inside-the-polygon, http://www.dummies.com/how-to/content/how-to-pinpoint-the-center-of-a-triangle.html
 
-                        def threeways(iterable):
-                                import itertools
-                                args = [iter(iterable)] * 3
-                                return itertools.izip_longest(fillvalue=None, *args)
-                        
-                        for a,b,c in threeways(pts):
-                                avgx = sum([each.x for each in (a,b,c)])/3.0
-                                avgy = sum([each.y for each in (a,b,c)])/3.0
-                                triangle_center = Vector(avgx,avgy)
-                                if Polygon.contains_point_s([a,b,c], triangle_center):
-                                        print "triangle",(a,b,c), triangle_center
-                                        return triangle_center
+			if len(pts) == 3: return (pts[0] + pts[1] + pts[2]) / 3
 
-##			if len(pts) == 3: return (pts[0] + pts[1] + pts[2]) / 3
-##
-##
-##			# find convex point v
-##			v = None
-##			for i in range(len(pts)):
-##				a, v, b = pts[i-1], pts[i], pts[(i+1) % len(pts)]
-##				if not point_orientation(a,v,b): break
-##
-##
-##			q_s = [ q for q in pts if q not in [a,v,b] and point_in_triangle(q, a,v,b) ]
-##
-##			if len(pts) >= 5:
-##				dbg(v, 0x000000, "V")
-##				dbg(a, 0x000000, "A")
-##				dbg(b, 0x000000, "B")
-##
-##				for q in q_s:
-##					dbg(q, 0x000000, "Q")
-##
-##			if q_s:
-##				# return the midpoint of the shortest diagonal qv
-##				q = min(q_s, key=lambda q: (q-v).length_squared )
-##
-##
-##				return (q - v) / 2.0 + v
-##			else:
-##				# no diagonal from v, return midpoint of ab instead
-##				return (b - a) / 2.0 + a
+
+			# find convex point v
+			v = None
+			for i in range(len(pts)):
+				a, v, b = pts[i-1], pts[i], pts[(i+1) % len(pts)]
+				if not point_orientation(a,v,b): break
+
+
+			q_s = [ q for q in pts if q not in [a,v,b] and point_in_triangle(q, a,v,b) ]
+
+			if len(pts) >= 5:
+				dbg(v, 0x000000, "V")
+				dbg(a, 0x000000, "A")
+				dbg(b, 0x000000, "B")
+
+				for q in q_s:
+					dbg(q, 0x000000, "Q")
+
+			if q_s:
+				# return the midpoint of the shortest diagonal qv
+				q = min(q_s, key=lambda q: (q-v).length_squared )
+
+
+				return (q - v) / 2.0 + v
+			else:
+				# no diagonal from v, return midpoint of ab instead
+				return (b - a) / 2.0 + a
 
 
 
@@ -552,11 +533,11 @@ class Polygon(object):
 
 
 
-                # ensure that the input polygons are not self-intersecting
-                newpolys = []
-                for poly in polys:
-                        newpolys.extend([Polygon.from_pointlist(part) for part in decompose(poly)])
-                polys = newpolys #decompose(newpolys)
+##                # ensure that the input polygons are not self-intersecting
+##                newpolys = []
+##                for poly in polys:
+##                        newpolys.extend(Polygon.decompose(poly))
+##                polys = Polygon.decompose(newpolys)
                 
                 # construct the raw offset data
 		raw = []
