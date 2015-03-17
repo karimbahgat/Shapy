@@ -5,7 +5,7 @@ import geovis.shapefile_fork as pyshp
 
 shape = pyshp.Reader("D:/Test Data/cshapes/cshapes.shp").shape(1)
 p = py2d.Math.Polygon.from_pointlist(py2d.Math.Polygon.simplify_sequence(py2d.Math.Polygon.from_tuples(shape.points)))
-p_buf = p.offset(p, -0.13) #before mod, works up until 0.3 but going further gives empty result
+p_buf = p.offset(p, -0.15) #before mod, works up until 0.3 but going further gives empty result
 
 ##coords = list(reversed([(10,10),(90,10),(80,90),(50,60),(20,77)]))
 ##p = py2d.Math.Polygon.from_tuples(coords)

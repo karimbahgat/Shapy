@@ -497,30 +497,6 @@ class Polygon(object):
 			return wn
 
 
-##                # alternate winding nr from http://www.dgp.toronto.edu/~mac/e-stuff/point_in_polygon.py
-##                
-##		def is_left(P0, P1, P2):
-##                    return (P1[0] - P0[0]) * (P2[1] - P0[1]) - (P2[0] - P0[0]) * (P1[1] - P0[1])
-##
-##                def winding_number(P, V):
-##                    wn = 0   # the winding number counter
-##
-##                    # repeat the first vertex at end
-##                    V = tuple(V[:]) + (V[0],)
-##
-##                    # loop through all edges of the polygon
-##                    for i in range(len(V)-1):     # edge from V[i] to V[i+1]
-##                        if V[i][1] <= P[1]:        # start y <= P[1]
-##                            if V[i+1][1] > P[1]:     # an upward crossing
-##                                if is_left(V[i], V[i+1], P) > 0: # P left of edge
-##                                    wn += 1           # have a valid up intersect
-##                        else:                      # start y > P[1] (no test needed)
-##                            if V[i+1][1] <= P[1]:    # a downward crossing
-##                                if is_left(V[i], V[i+1], P) < 0: # P right of edge
-##                                    wn -= 1           # have a valid down intersect
-##                    return wn
-
-
 		def find_point_in_poly(pts):
 			# find point inside of pts according to http://www.exaflop.org/docs/cgafaq/cga2.html#Subject%202.06:%20How%20do%20I%20find%20a%20single%20point%20inside%20a%20simple%20polygonu
 			# alternative approaches at http://stackoverflow.com/questions/9797448/get-a-point-inside-the-polygon, http://www.dummies.com/how-to/content/how-to-pinpoint-the-center-of-a-triangle.html
@@ -596,9 +572,8 @@ class Polygon(object):
 
 		#print "\n-----------------\n"
 		output = []
-		#raw = (Polygon.simplify_sequence(each) for each in raw)
+		raw = (Polygon.simplify_sequence(each) for each in raw)
 		raw = [each for each in raw if len(each) >= 3] #modified
-		#rawflat = [p for poly in raw for p in poly]
 		
 		#import pydraw
 		import random
